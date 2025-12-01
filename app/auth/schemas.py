@@ -8,5 +8,5 @@ class RegisterResponse(BaseModel):
     message: str
 
 class LoginResponse(BaseModel):
-    token: str
+    access_token: str
     token_type: str = "bearer"

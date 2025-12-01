@@ -1,52 +1,3 @@
-import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from app.database import Base, get_db
-from app.main import app
-import os
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
-
-DB_HOST = os.getenv("host")
-DB_PORT = os.getenv("port")
-DB_USER = os.getenv("user")
-DB_PASSWORD = os.getenv("password")
-DB_NAME = os.getenv("database")
-TEST_DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}_test"
-
-# Create test engine
-test_engine = create_engine(TEST_DATABASE_URL)
-
-# Create test session
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
-
-# Override get_db dependency
-def override_get_db():
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
-
-# Apply the override
-app.dependency_overrides[get_db] = override_get_db
-
-@pytest.fixture(scope="function", autouse=True)
-def setup_database():
-    """Create tables before each test and drop them after"""
-    Base.metadata.create_all(bind=test_engine)
-    yield
-    Base.metadata.drop_all(bind=test_engine)
-
-@pytest.fixture(scope="module")
-def client():
-    """Create a test client"""
-    return TestClient(app)
-
-
 def test_register_user(client):
     response = client.post(
         "/auth/register",
@@ -106,7 +57,7 @@ def test_login_user(client):
 
     assert response.status_code == 200
     json_response = response.json()
-    assert "token" in json_response
+    assert "access_token" in json_response
     assert json_response["token_type"] == "bearer"
 
 def test_login_no_user(client):
@@ -139,3 +90,4 @@ def test_login_invalid_username(client):
 
     assert response.status_code == 404
     assert response.json() == {"detail": "User does not exist"}
+
