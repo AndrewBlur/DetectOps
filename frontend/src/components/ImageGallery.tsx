@@ -1,5 +1,21 @@
 import React, { useState } from 'react';
-import { Grid, Card, CardMedia, CardContent, Typography, Button, Box, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Alert, CircularProgress } from '@mui/material';
+import {
+  Grid,
+  Card,
+  CardMedia,
+  CardContent,
+  Typography,
+  Button,
+  Box,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Alert,
+  CircularProgress,
+  IconButton
+} from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import api from '../services/api';
 
@@ -20,6 +36,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images, onDeleteSuccess }) 
   const [selectedImageId, setSelectedImageId] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [hoveredImageId, setHoveredImageId] = useState<number | null>(null);
+
 
   const handleDeleteClick = (imageId: number) => {
     setSelectedImageId(imageId);
@@ -55,13 +73,24 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images, onDeleteSuccess }) 
       <Grid container spacing={3}>
         {images.map((image) => (
           <Grid item key={image.id} xs={12} sm={6} md={4} lg={3}>
-            <Card>
+            <Card
+              onMouseEnter={() => setHoveredImageId(image.id)}
+              onMouseLeave={() => setHoveredImageId(null)}
+              sx={{
+                position: 'relative',
+                transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+                '&:hover': {
+                  transform: 'translateY(-5px)',
+                  boxShadow: 6,
+                },
+              }}
+            >
               <CardMedia
                 component="img"
                 height="194"
                 image={image.storage_url}
                 alt={image.filepath.split('/').pop()}
-                sx={{ objectFit: 'contain', backgroundColor: '#f0f0f0' }}
+                sx={{ objectFit: 'contain', backgroundColor: 'background.paper' }}
               />
               <CardContent>
                 <Typography variant="body2" color="text.secondary" noWrap>
@@ -70,18 +99,32 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images, onDeleteSuccess }) 
                 <Typography variant="caption" color="text.secondary">
                   Uploaded: {new Date(image.uploaded_at).toLocaleDateString()}
                 </Typography>
-                <Box sx={{ mt: 1, display: 'flex', justifyContent: 'flex-end' }}>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    size="small"
-                    startIcon={<DeleteIcon />}
-                    onClick={() => handleDeleteClick(image.id)}
-                    disabled={loading}
+                {hoveredImageId === image.id && (
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 8,
+                      right: 8,
+                      backgroundColor: 'rgba(0,0,0,0.6)',
+                      borderRadius: '50%',
+                      p: 0.5,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'opacity 0.2s ease-in-out',
+                    }}
                   >
-                    Delete
-                  </Button>
-                </Box>
+                    <IconButton
+                      aria-label="delete"
+                      size="small"
+                      onClick={() => handleDeleteClick(image.id)}
+                      disabled={loading}
+                      sx={{ color: 'white' }}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                )}
               </CardContent>
             </Card>
           </Grid>

@@ -21,7 +21,7 @@ const LoginPage: React.FC = () => {
         password: password,
       }));
       login(response.data.access_token);
-      navigate('/');
+      navigate('/app/images');
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Login failed');
     }
@@ -74,8 +74,8 @@ const LoginPage: React.FC = () => {
           >
             Login
           </Button>
-          <Typography variant="body2" align="center">
-            Don't have an account? <Link to="/register">Register</Link>
+          <Typography variant="body1" align="center" sx={{ mt: 2 }}>
+            Don't have an account? <Link to="/register" style={{ color: 'inherit', fontWeight: 'bold' }}>Sign Up Now</Link>
           </Typography>
         </Box>
       </Box>

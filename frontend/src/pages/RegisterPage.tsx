@@ -92,8 +92,8 @@ const RegisterPage: React.FC = () => {
           >
             Register
           </Button>
-          <Typography variant="body2" align="center">
-            Already have an account? <Link to="/login">Login</Link>
+          <Typography variant="body1" align="center" sx={{ mt: 2 }}>
+            Already have an account? <Link to="/login" style={{ color: 'inherit', fontWeight: 'bold' }}>Login Here</Link>
           </Typography>
         </Box>
       </Box>
