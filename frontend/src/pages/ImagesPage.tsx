@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Container, Typography, Box, CircularProgress, Alert, Button, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import type { SelectChangeEvent } from '@mui/material';
 import api from '../services/api';
 import ImageUpload from '../components/ImageUpload';
 import ImageGallery from '../components/ImageGallery';
@@ -28,7 +29,7 @@ const ImagesPage: React.FC = () => {
   const fetchImages = useCallback(async () => {
     setLoading(true);
     setError(null);
-    setSelectedImages([]); // Clear selection on fetch
+    setSelectedImages([]);
     try {
       const response = await api.get<PaginatedImageResponse>('/images/mine', {
         params: { page, page_size: pageSize },
@@ -48,12 +49,11 @@ const ImagesPage: React.FC = () => {
   }, [fetchImages]);
 
   const handleImageUploadSuccess = () => {
-    setPage(1); // Reset to first page after upload
+    setPage(1);
     fetchImages();
   };
 
   const handleImageDeleteSuccess = () => {
-    // If the last image on a page is deleted, go to the previous page
     if (images.length === 1 && page > 1) {
       setPage(page - 1);
     } else {
@@ -75,23 +75,10 @@ const ImagesPage: React.FC = () => {
     }
   };
 
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handlePageSizeChange = (event: React.ChangeEvent<{ value: unknown }>) => {
-    setPageSize(event.target.value as number);
-    setPage(1); // Reset to first page on page size change
-  };
-
-  const handleSelectedImagesChange = (newSelected: number[]) => {
-    setSelectedImages(newSelected);
-  };
-
   return (
     <Container maxWidth="lg">
       <Box sx={{ my: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
+        <Typography variant="h4" gutterBottom>
           Your Image Dashboard
         </Typography>
 
@@ -100,15 +87,17 @@ const ImagesPage: React.FC = () => {
         </Box>
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h5" component="h2">
-            Your Uploaded Images
-          </Typography>
+          <Typography variant="h5">Your Uploaded Images</Typography>
+
           <FormControl size="small" sx={{minWidth: 120}}>
             <InputLabel id="page-size-label">Images per page</InputLabel>
             <Select
               labelId="page-size-label"
               value={pageSize}
-              onChange={handlePageSizeChange}
+              onChange={(e: SelectChangeEvent<string>) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
               label="Images per page"
             >
               <MenuItem value={10}>10</MenuItem>
@@ -120,32 +109,23 @@ const ImagesPage: React.FC = () => {
 
         {loading && <Box sx={{ display: 'flex', justifyContent: 'center' }}><CircularProgress /></Box>}
         {error && <Alert severity="error">{error}</Alert>}
-        {!loading && !error && images.length === 0 && (
-          <Typography variant="body1">No images uploaded yet. Upload some above!</Typography>
-        )}
+
         {!loading && !error && images.length > 0 && (
           <>
             <ImageGallery
               images={images}
               onDeleteSuccess={handleImageDeleteSuccess}
               selectedImages={selectedImages}
-              onSelectedImagesChange={handleSelectedImagesChange}
+              onSelectedImagesChange={setSelectedImages}
               onDeleteSelected={handleDeleteSelected}
             />
+
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-              <Button
-                disabled={page <= 1}
-                onClick={() => handlePageChange(page - 1)}
-              >
-                Previous
-              </Button>
-              <Typography sx={{ mx: 2, my: 'auto' }}>Page {page} of {Math.ceil(totalImages/pageSize)}</Typography>
-              <Button
-                disabled={page * pageSize >= totalImages}
-                onClick={() => handlePageChange(page + 1)}
-              >
-                Next
-              </Button>
+              <Button disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button>
+              <Typography sx={{ mx: 2, my: 'auto' }}>
+                Page {page} of {Math.ceil(totalImages / pageSize)}
+              </Typography>
+              <Button disabled={page * pageSize >= totalImages} onClick={() => setPage(page + 1)}>Next</Button>
             </Box>
           </>
         )}

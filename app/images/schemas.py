@@ -1,5 +1,6 @@
 from pydantic import BaseModel,ConfigDict
 from datetime import datetime
+from typing import List
 
 class ImageResponse(BaseModel):
     id: int
@@ -9,3 +10,7 @@ class ImageResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+class PaginatedImageResponse(BaseModel):
+    images: List[ImageResponse]
+    total: int

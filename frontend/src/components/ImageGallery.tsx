@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Grid,
   Card,
   CardMedia,
   CardContent,
@@ -36,10 +35,16 @@ interface ImageGalleryProps {
   onDeleteSelected: () => void;
 }
 
-const ImageGallery: React.FC<ImageGalleryProps> = ({ images, onDeleteSuccess, selectedImages, onSelectedImagesChange, onDeleteSelected }) => {
-  const [openDialog, setOpenDialog] = useState<boolean>(false);
+const ImageGallery: React.FC<ImageGalleryProps> = ({
+  images,
+  onDeleteSuccess,
+  selectedImages,
+  onSelectedImagesChange,
+  onDeleteSelected,
+}) => {
+  const [openDialog, setOpenDialog] = useState(false);
   const [selectedImageId, setSelectedImageId] = useState<number | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleDeleteClick = (imageId: number) => {
@@ -54,14 +59,13 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images, onDeleteSuccess, se
   };
 
   const handleConfirmDelete = async () => {
-    if (selectedImageId === null) return;
+    if (!selectedImageId) return;
 
     setLoading(true);
     setError(null);
-
     try {
       await api.delete(`/images/${selectedImageId}`);
-      onDeleteSuccess(); // Notify parent to refresh images
+      onDeleteSuccess();
       handleCloseDialog();
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to delete image.');
@@ -70,24 +74,22 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images, onDeleteSuccess, se
     }
   };
 
-  const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.checked) {
-      onSelectedImagesChange(images.map((image) => image.id));
-    } else {
-      onSelectedImagesChange([]);
-    }
+  const toggleSelect = (id: number) => {
+    onSelectedImagesChange(
+      selectedImages.includes(id)
+        ? selectedImages.filter((x) => x !== id)
+        : [...selectedImages, id]
+    );
   };
 
-  const handleSelectOne = (imageId: number) => {
-    const newSelected = selectedImages.includes(imageId)
-      ? selectedImages.filter((id) => id !== imageId)
-      : [...selectedImages, imageId];
-    onSelectedImagesChange(newSelected);
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onSelectedImagesChange(e.target.checked ? images.map((img) => img.id) : []);
   };
 
   return (
     <>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+      {/* Header: Select All + Delete Selected */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
         <FormControlLabel
           control={
             <Checkbox
@@ -98,6 +100,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images, onDeleteSuccess, se
           }
           label="Select All"
         />
+
         {selectedImages.length > 0 && (
           <Button
             variant="outlined"
@@ -109,84 +112,112 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images, onDeleteSuccess, se
           </Button>
         )}
       </Box>
+
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <Grid container spacing={3}>
+
+      {/* ---- CARD GRID ---- */}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+          gap: 3,
+          pb: 4,
+        }}
+      >
         {images.map((image) => (
-          <Grid item key={image.id} xs={12} sm={6} md={4} lg={3}>
-            <Card
+          <Card
+            key={image.id}
+            sx={{
+              height: 260,
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              position: "relative",
+              borderRadius: 2,
+              overflow: "hidden",
+              transition: "0.2s",
+              boxShadow: selectedImages.includes(image.id) ? 6 : 1,
+              border: selectedImages.includes(image.id)
+                ? "2px solid #00e676"
+                : "2px solid transparent",
+              "&:hover": {
+                transform: "scale(1.02)",
+              },
+            }}
+          >
+            {/* Select Checkbox */}
+            <Checkbox
+              checked={selectedImages.includes(image.id)}
+              onChange={() => toggleSelect(image.id)}
               sx={{
-                position: 'relative',
-                transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
-                boxShadow: selectedImages.includes(image.id) ? 8 : 1,
-                transform: selectedImages.includes(image.id) ? 'scale(1.02)' : 'scale(1)',
-                border: selectedImages.includes(image.id) ? '2px solid' : '2px solid transparent',
-                borderColor: selectedImages.includes(image.id) ? 'primary.main' : 'transparent',
+                position: "absolute",
+                top: 8,
+                left: 8,
+                zIndex: 3,
+                background: "#ffffff88",
+                borderRadius: "4px",
+              }}
+            />
+
+            {/* Delete Icon */}
+            <IconButton
+              onClick={() => handleDeleteClick(image.id)}
+              sx={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                zIndex: 3,
+                background: "rgba(0,0,0,0.6)",
+                color: "white",
+                borderRadius: "50%",
+                "&:hover": { background: "rgba(0,0,0,0.8)" },
               }}
             >
-              <Checkbox
-                checked={selectedImages.includes(image.id)}
-                onChange={() => handleSelectOne(image.id)}
-                sx={{ position: 'absolute', top: 8, left: 8, zIndex: 1, backgroundColor: 'rgba(255,255,255,0.7)' }}
-              />
-              <CardMedia
-                component="img"
-                height="194"
-                image={image.storage_url}
-                alt={image.filepath.split('/').pop()}
-                sx={{ objectFit: 'contain', backgroundColor: 'background.paper' }}
-              />
-              <CardContent>
-                <Typography variant="body2" color="text.secondary" noWrap>
-                  {image.filepath.split('/').pop()}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Uploaded: {new Date(image.uploaded_at).toLocaleDateString()}
-                </Typography>
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: 8,
-                    right: 8,
-                    backgroundColor: 'rgba(0,0,0,0.6)',
-                    borderRadius: '50%',
-                    p: 0.5,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <IconButton
-                    aria-label="delete"
-                    size="small"
-                    onClick={() => handleDeleteClick(image.id)}
-                    disabled={loading}
-                    sx={{ color: 'white' }}
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+              <DeleteIcon fontSize="small" />
+            </IconButton>
 
-      <Dialog
-        open={openDialog}
-        onClose={handleCloseDialog}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-      >
-        <DialogTitle id="alert-dialog-title">{"Confirm Delete"}</DialogTitle>
+            {/* Image */}
+            <CardMedia
+              component="img"
+              src={image.storage_url}
+              alt="uploaded image"
+              sx={{
+                height: 160,
+                width: "100%",
+                objectFit: "cover",
+              }}
+            />
+
+            {/* Filename + Date */}
+            <CardContent sx={{ textAlign: "center", overflow: "hidden" }}>
+              <Typography
+                variant="body2"
+                noWrap
+                sx={{ fontSize: 13, fontWeight: 500 }}
+              >
+                {image.filepath.split("/").pop()}
+              </Typography>
+
+              <Typography variant="caption" sx={{ opacity: 0.6 }}>
+                {new Date(image.uploaded_at).toLocaleDateString()}
+              </Typography>
+            </CardContent>
+          </Card>
+        ))}
+      </Box>
+
+      {/* ---- DELETE CONFIRMATION MODAL ---- */}
+      <Dialog open={openDialog} onClose={handleCloseDialog}>
+        <DialogTitle>Delete Image?</DialogTitle>
         <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            Are you sure you want to delete this image? This action cannot be undone.
+          <DialogContentText>
+            This action cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog} disabled={loading}>Cancel</Button>
-          <Button onClick={handleConfirmDelete} color="error" autoFocus disabled={loading}>
-            {loading ? <CircularProgress size={24} /> : 'Delete'}
+          <Button onClick={handleConfirmDelete} color="error" disabled={loading}>
+            {loading ? <CircularProgress size={20} /> : "Delete"}
           </Button>
         </DialogActions>
       </Dialog>

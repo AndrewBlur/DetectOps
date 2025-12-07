@@ -1,0 +1,1 @@
+from app.tasks.image_tasks import process_batch_upload
