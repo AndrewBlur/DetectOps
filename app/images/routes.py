@@ -6,10 +6,11 @@ from typing import List
 
 from celery.result import AsyncResult
 from app.celery_app import celery_app
-
 from app.tasks.image_tasks import process_batch_upload
+
 from app.database import get_db
 from app.images.models import Image
+from app.images.cache import get_signed_url_cached
 from app.auth.security import get_current_user
 from app.images.schemas import ImageResponse,PaginatedImageResponse
 from app.utils.blob_service import upload_to_blob,generate_signed_url,delete_blob
@@ -56,7 +57,7 @@ async def upload_image(file:UploadFile, db:Session=Depends(get_db), current_user
     
     signed_url = generate_signed_url(blob_name)
 
-    new_image = Image(filepath=blob_name, storage_url=signed_url, user_id=current_user.id,uploaded_at=datetime.now())
+    new_image = Image(filepath=blob_name, storage_url=signed_url, user_id=current_user.id,uploaded_at=datetime.now(), is_annotated=False)
     db.add(new_image)
     db.commit()
     db.refresh(new_image)
@@ -73,21 +74,70 @@ def get_my_images(
     
     offset = (page - 1) * page_size
 
-    total = db.query(Image).filter(Image.user_id == current_user.id).count()
+    total = db.query(Image).filter(Image.user_id == current_user.id,Image.is_annotated==False).count()
 
     images = (
         db.query(Image)
-        .filter(Image.user_id == current_user.id)
+        .filter(Image.user_id == current_user.id,Image.is_annotated==False)
         .order_by(Image.uploaded_at.desc())
         .offset(offset)
         .limit(page_size)
         .all()
     )
 
+    for img in images:
+        img.storage_url = get_signed_url_cached(img)
+    
+
     return {
         "images": images,
         "total": total
     }
+
+@router.get("/annotated", status_code=200,response_model=PaginatedImageResponse)
+def get_my_annotated_images(
+    page: int = 1,
+    page_size: int = 10,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    
+    offset = (page - 1) * page_size
+
+    total = db.query(Image).filter(Image.user_id == current_user.id,Image.is_annotated==True).count()
+
+    images = (
+        db.query(Image)
+        .filter(Image.user_id == current_user.id,Image.is_annotated==True)
+        .order_by(Image.uploaded_at.desc())
+        .offset(offset)
+        .limit(page_size)
+        .all()
+    )
+
+    for img in images:
+        img.storage_url = get_signed_url_cached(img)
+
+    return {
+        "images": images,
+        "total": total
+    }
+
+@router.get("/{image_id}", status_code=200, response_model=ImageResponse)
+def get_image(
+    image_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    image = db.query(Image).filter(Image.id == image_id, Image.user_id == current_user.id).first()
+
+    if not image:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    image.storage_url = get_signed_url_cached(image)
+
+    return image
+
 
 @router.delete("/{image_id}",status_code=204)
 def delete_image(image_id:int, db:Session=Depends(get_db), current_user=Depends(get_current_user)):

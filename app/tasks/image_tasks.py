@@ -3,6 +3,7 @@ from datetime import datetime
 from app.celery_app import celery_app
 
 from app.database import SessionLocal
+from app.annotations.models import Annotation
 from app.images.models import Image
 from app.auth.models import User
 from app.utils.blob_service import upload_to_blob, generate_signed_url
@@ -32,7 +33,8 @@ def process_batch_upload(files: list, user_id: int):
                     filepath=blob_name,
                     storage_url=signed_url,
                     user_id=user_id,
-                    uploaded_at=datetime.now()
+                    uploaded_at=datetime.now(),
+                    is_annotated=False
                 )
                 db.add(new_image)
                 db.commit()

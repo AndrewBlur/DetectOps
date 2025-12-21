@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Button, Container, Typography, AppBar, Toolbar } from '@mui/material';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { keyframes } from '@mui/system';
 
 const fadeIn = keyframes`

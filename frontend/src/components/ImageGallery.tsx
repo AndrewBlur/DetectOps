@@ -33,6 +33,7 @@ interface ImageGalleryProps {
   selectedImages: number[];
   onSelectedImagesChange: (selectedIds: number[]) => void;
   onDeleteSelected: () => void;
+
 }
 
 const ImageGallery: React.FC<ImageGalleryProps> = ({
@@ -189,7 +190,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
             />
 
             {/* Filename + Date */}
-            <CardContent sx={{ textAlign: "center", overflow: "hidden" }}>
+            <CardContent sx={{ textAlign: "center", overflow: "hidden", flexGrow: 1 }}>
               <Typography
                 variant="body2"
                 noWrap
@@ -202,6 +203,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 {new Date(image.uploaded_at).toLocaleDateString()}
               </Typography>
             </CardContent>
+
+
           </Card>
         ))}
       </Box>

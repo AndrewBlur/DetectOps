@@ -2,8 +2,6 @@ from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.database import Base
-from app.images.models import Image
-
 
 class User(Base):
     __tablename__ = "users"
@@ -11,4 +9,8 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     images = relationship("Image", back_populates="owner")
-
+    annotations = relationship(
+        "Annotation",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )

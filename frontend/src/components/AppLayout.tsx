@@ -25,6 +25,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import OnlinePredictionIcon from '@mui/icons-material/OnlinePrediction';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
+import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
 
 // MUI types (TYPES)
 import type { Theme } from '@mui/material';
@@ -107,6 +108,7 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
 
 const navItems = [
     { text: 'Your Images', icon: <PhotoLibraryIcon />, path: '/app/images' },
+    { text: 'Annotated', icon: <PlaylistAddCheckIcon />, path: '/app/annotated' },
     { text: 'Annotate', icon: <EditIcon />, path: '/app/annotate' },
     { text: 'Predictions', icon: <OnlinePredictionIcon />, path: '/app/predictions' },
 ];

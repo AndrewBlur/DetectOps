@@ -1,5 +1,4 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
-import api from '../services/api';
 
 interface AuthContextType {
   token: string | null;
@@ -73,6 +72,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   );
 };
 
+import { parseJwt } from '../utils/jwt';
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -80,12 +81,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-// Helper function to decode JWT
-function parseJwt(token: string) {
-  try {
-    return JSON.parse(atob(token.split('.')[1]));
-  } catch (e) {
-    return null;
-  }
-}

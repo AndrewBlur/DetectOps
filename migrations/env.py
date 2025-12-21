@@ -5,6 +5,7 @@ from sqlalchemy import pool
 from app.database import Base
 from app.auth.models import *
 from app.images.models import *
+from app.annotations.models import *
 
 from alembic import context
 

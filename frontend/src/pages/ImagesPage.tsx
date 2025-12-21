@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Container, Typography, Box, CircularProgress, Alert, Button, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import api from '../services/api';
 import ImageUpload from '../components/ImageUpload';
 import ImageGallery from '../components/ImageGallery';
@@ -25,6 +26,8 @@ const ImagesPage: React.FC = () => {
   const [pageSize, setPageSize] = useState<number>(10);
   const [totalImages, setTotalImages] = useState<number>(0);
   const [selectedImages, setSelectedImages] = useState<number[]>([]);
+
+  const navigate = useNavigate();
 
   const fetchImages = useCallback(async () => {
     setLoading(true);
@@ -118,6 +121,7 @@ const ImagesPage: React.FC = () => {
               selectedImages={selectedImages}
               onSelectedImagesChange={setSelectedImages}
               onDeleteSelected={handleDeleteSelected}
+              navigate={navigate}
             />
 
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>

@@ -79,6 +79,16 @@ def test_get_my_images(client: TestClient):
     assert isinstance(data["images"], list)
 
 
+def test_get_my_annotated_images(client: TestClient):
+    response = client.get("/images/annotated")
+    assert response.status_code == 200
+    data = response.json()
+
+    assert "images" in data
+    assert "total" in data
+    assert isinstance(data["images"], list)
+
+
 def test_delete_image_success(client: TestClient):
     # First upload an image
     with patch("app.images.routes.upload_to_blob"), \

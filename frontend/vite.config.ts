@@ -8,6 +8,7 @@ export default defineConfig({
     proxy: {
       '/auth': 'http://127.0.0.1:8000',
       '/images': 'http://127.0.0.1:8000',
+      '/annotations': 'http://127.0.0.1:8000',
     }
   }
 })

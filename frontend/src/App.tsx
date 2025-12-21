@@ -14,9 +14,10 @@ import RegisterPage from './pages/RegisterPage';
 // Authenticated Pages (will be under /app)
 import AppLayout from './components/AppLayout';
 import ImagesPage from './pages/ImagesPage'; // Will be renamed to ImagesPage
-import AnnotatePage from './pages/AnnotatePage';
 import PredictionsPage from './pages/PredictionsPage';
 import SettingsPage from './pages/SettingsPage';
+import AnnotatedImagesPage from './pages/AnnotatedImagesPage';
+import AnnotationPage from './pages/AnnotationPage';
 
 
 function App() {
@@ -35,8 +36,10 @@ function App() {
             <Route path="/app" element={<ProtectedRoute />}>
               <Route element={<AppLayout />}>
                 {/* Nested routes within AppLayout */}
-                <Route path="images" element={<ImagesPage />} /> {/* This will be Your Images page */}
-                <Route path="annotate" element={<AnnotatePage />} />
+                <Route path="images" element={<ImagesPage />} />
+                <Route path="annotate" element={<AnnotationPage />} />
+                <Route path="annotated" element={<AnnotatedImagesPage />} />
+
                 <Route path="predictions" element={<PredictionsPage />} />
                 <Route path="settings" element={<SettingsPage />} />
                 {/* Default route for /app will redirect to /app/images */}
