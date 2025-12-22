@@ -15,10 +15,12 @@ import {
   CircularProgress,
   IconButton,
   Checkbox,
-  FormControlLabel
+  FormControlLabel,
+  CardActionArea
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import api from '../services/api';
+import { deleteImage } from '../services/api';
+import { useParams, useNavigate } from 'react-router-dom';
 
 interface Image {
   id: number;
@@ -33,7 +35,6 @@ interface ImageGalleryProps {
   selectedImages: number[];
   onSelectedImagesChange: (selectedIds: number[]) => void;
   onDeleteSelected: () => void;
-
 }
 
 const ImageGallery: React.FC<ImageGalleryProps> = ({
@@ -43,12 +44,15 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
   onSelectedImagesChange,
   onDeleteSelected,
 }) => {
+  const { projectId } = useParams<{ projectId: string }>();
+  const navigate = useNavigate();
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedImageId, setSelectedImageId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleDeleteClick = (imageId: number) => {
+  const handleDeleteClick = (event: React.MouseEvent, imageId: number) => {
+    event.stopPropagation();
     setSelectedImageId(imageId);
     setOpenDialog(true);
   };
@@ -60,12 +64,12 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
   };
 
   const handleConfirmDelete = async () => {
-    if (!selectedImageId) return;
+    if (!selectedImageId || !projectId) return;
 
     setLoading(true);
     setError(null);
     try {
-      await api.delete(`/images/${selectedImageId}`);
+      await deleteImage(Number(projectId), selectedImageId);
       onDeleteSuccess();
       handleCloseDialog();
     } catch (err: any) {
@@ -75,7 +79,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     }
   };
 
-  const toggleSelect = (id: number) => {
+  const toggleSelect = (event: React.MouseEvent, id: number) => {
+    event.stopPropagation();
     onSelectedImagesChange(
       selectedImages.includes(id)
         ? selectedImages.filter((x) => x !== id)
@@ -85,6 +90,10 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     onSelectedImagesChange(e.target.checked ? images.map((img) => img.id) : []);
+  };
+  
+  const handleCardClick = (imageId: number) => {
+    navigate(`/projects/${projectId}/images/${imageId}/annotate`);
   };
 
   return (
@@ -146,10 +155,12 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
               },
             }}
           >
+             <CardActionArea onClick={() => handleCardClick(image.id)} sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+
             {/* Select Checkbox */}
             <Checkbox
               checked={selectedImages.includes(image.id)}
-              onChange={() => toggleSelect(image.id)}
+              onClick={(e) => toggleSelect(e, image.id)}
               sx={{
                 position: "absolute",
                 top: 8,
@@ -162,7 +173,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
 
             {/* Delete Icon */}
             <IconButton
-              onClick={() => handleDeleteClick(image.id)}
+              onClick={(e) => handleDeleteClick(e, image.id)}
               sx={{
                 position: "absolute",
                 top: 8,
@@ -190,7 +201,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
             />
 
             {/* Filename + Date */}
-            <CardContent sx={{ textAlign: "center", overflow: "hidden", flexGrow: 1 }}>
+            <CardContent sx={{ textAlign: "center", overflow: "hidden", flexGrow: 1,  width: '100%' }}>
               <Typography
                 variant="body2"
                 noWrap
@@ -203,7 +214,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 {new Date(image.uploaded_at).toLocaleDateString()}
               </Typography>
             </CardContent>
-
+            </CardActionArea>
 
           </Card>
         ))}
@@ -229,3 +240,4 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
 };
 
 export default ImageGallery;
+

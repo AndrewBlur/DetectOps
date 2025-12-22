@@ -21,7 +21,7 @@ const LoginPage: React.FC = () => {
         password: password,
       }));
       login(response.data.access_token);
-      navigate('/app/images');
+      navigate('/projects');
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Login failed');
     }

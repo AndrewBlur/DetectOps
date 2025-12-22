@@ -1,5 +1,5 @@
-import React from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import React, { useMemo } from 'react';
+import { Outlet, NavLink, useNavigate, useParams } from 'react-router-dom';
 
 // MUI components and functions (VALUES)
 import { styled } from '@mui/material/styles';
@@ -20,8 +20,8 @@ import ListItemText from '@mui/material/ListItemText';
 // MUI Icons (VALUES)
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
-import EditIcon from '@mui/icons-material/Edit';
 import OnlinePredictionIcon from '@mui/icons-material/OnlinePrediction';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -106,17 +106,19 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
   }),
 );
 
-const navItems = [
-    { text: 'Your Images', icon: <PhotoLibraryIcon />, path: '/app/images' },
-    { text: 'Annotated', icon: <PlaylistAddCheckIcon />, path: '/app/annotated' },
-    { text: 'Annotate', icon: <EditIcon />, path: '/app/annotate' },
-    { text: 'Predictions', icon: <OnlinePredictionIcon />, path: '/app/predictions' },
-];
-
 export default function AppLayout() {
   const [open, setOpen] = React.useState(true);
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const { projectId } = useParams<{ projectId: string }>();
+
+  const navItems = useMemo(() => [
+    { text: 'Back to Projects', icon: <ArrowBackIcon />, path: '/projects' },
+    { text: 'Your Images', icon: <PhotoLibraryIcon />, path: `/projects/${projectId}/images` },
+    { text: 'Annotated', icon: <PlaylistAddCheckIcon />, path: `/projects/${projectId}/annotated` },
+    // 'Annotate' link removed as it requires specific image context
+    { text: 'Predictions', icon: <OnlinePredictionIcon />, path: `/projects/${projectId}/predictions` },
+  ], [projectId]);
 
   const handleDrawerOpen = () => {
     setOpen(true);
@@ -125,7 +127,7 @@ export default function AppLayout() {
   const handleDrawerClose = () => {
     setOpen(false);
   };
-  
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -195,43 +197,43 @@ export default function AppLayout() {
         </List>
         <Divider />
         <List sx={{ marginTop: 'auto' }}>
-            <ListItem disablePadding sx={{ display: 'block' }}>
-                <ListItemButton
-                    component={NavLink}
-                    to="/app/settings"
-                    sx={{
-                    minHeight: 48,
-                    justifyContent: open ? 'initial' : 'center',
-                    px: 2.5,
-                    '&.active': {
-                        backgroundColor: 'primary.main',
-                        color: 'primary.contrastText',
-                        '& .MuiListItemIcon-root': {
-                        color: 'primary.contrastText',
-                        },
-                    },
-                    }}
-                >
-                    <ListItemIcon
-                    sx={{
-                        minWidth: 0,
-                        mr: open ? 3 : 'auto',
-                        justifyContent: 'center',
-                    }}
-                    >
-                        <SettingsIcon />
-                    </ListItemIcon>
-                    <ListItemText primary="Settings" sx={{ opacity: open ? 1 : 0 }} />
-                </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding sx={{ display: 'block' }}>
-                <ListItemButton onClick={handleLogout} sx={{minHeight: 48, justifyContent: open ? 'initial' : 'center', px: 2.5}}>
-                    <ListItemIcon sx={{minWidth: 0, mr: open ? 3 : 'auto', justifyContent: 'center'}}>
-                        <LogoutIcon />
-                    </ListItemIcon>
-                    <ListItemText primary="Logout" sx={{ opacity: open ? 1 : 0 }} />
-                </ListItemButton>
-            </ListItem>
+          <ListItem disablePadding sx={{ display: 'block' }}>
+            <ListItemButton
+              component={NavLink}
+              to={`/projects/${projectId}/settings`}
+              sx={{
+                minHeight: 48,
+                justifyContent: open ? 'initial' : 'center',
+                px: 2.5,
+                '&.active': {
+                  backgroundColor: 'primary.main',
+                  color: 'primary.contrastText',
+                  '& .MuiListItemIcon-root': {
+                    color: 'primary.contrastText',
+                  },
+                },
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  minWidth: 0,
+                  mr: open ? 3 : 'auto',
+                  justifyContent: 'center',
+                }}
+              >
+                <SettingsIcon />
+              </ListItemIcon>
+              <ListItemText primary="Settings" sx={{ opacity: open ? 1 : 0 }} />
+            </ListItemButton>
+          </ListItem>
+          <ListItem disablePadding sx={{ display: 'block' }}>
+            <ListItemButton onClick={handleLogout} sx={{ minHeight: 48, justifyContent: open ? 'initial' : 'center', px: 2.5 }}>
+              <ListItemIcon sx={{ minWidth: 0, mr: open ? 3 : 'auto', justifyContent: 'center' }}>
+                <LogoutIcon />
+              </ListItemIcon>
+              <ListItemText primary="Logout" sx={{ opacity: open ? 1 : 0 }} />
+            </ListItemButton>
+          </ListItem>
         </List>
       </Drawer>
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>

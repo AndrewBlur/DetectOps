@@ -1,13 +1,15 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { Button, Box, Typography, Alert, CircularProgress } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import api from '../services/api';
+import { uploadBatchImages } from '../services/api';
+import { useParams } from 'react-router-dom';
 
 interface ImageUploadProps {
   onUploadSuccess: () => void;
 }
 
 const ImageUpload: React.FC<ImageUploadProps> = ({ onUploadSuccess }) => {
+  const { projectId } = useParams<{ projectId: string }>();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,22 +51,21 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onUploadSuccess }) => {
       setError('Please select at least one file to upload.');
       return;
     }
+    if (!projectId) {
+        setError('Project ID is missing.');
+        return;
+    }
 
     setLoading(true);
     setError(null);
     setSuccess(null);
 
-    const formData = new FormData();
-    selectedFiles.forEach(file => {
-      formData.append('files', file);
-    });
+    const fileList = new DataTransfer();
+    selectedFiles.forEach(file => fileList.items.add(file));
+
 
     try {
-      await api.post('/images/upload/batch', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      await uploadBatchImages(Number(projectId), fileList.files);
       setSuccess('Images uploaded successfully!');
       setSelectedFiles([]); // Clear selected files
       if (fileInputRef.current) {
@@ -139,3 +140,4 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onUploadSuccess }) => {
 };
 
 export default ImageUpload;
+

@@ -9,7 +9,6 @@ class Annotation(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     image_id = Column(Integer, ForeignKey("images.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     x = Column(Float, nullable=False)
     y = Column(Float, nullable=False)
     w = Column(Float, nullable=False)
@@ -18,5 +17,4 @@ class Annotation(Base):
     created_at = Column(DateTime, default=datetime.now)
 
     image = relationship("Image", back_populates="annotations")
-    user = relationship("User", back_populates="annotations")
 

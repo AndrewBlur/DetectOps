@@ -16,7 +16,6 @@ class AnnotationRequest(BaseModel):
 class AnnotationResponse(BaseModel):
     id: int
     image_id: int
-    user_id: int
     x: float
     y: float
     w: float

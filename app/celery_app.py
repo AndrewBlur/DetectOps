@@ -1,5 +1,7 @@
 from celery import Celery
 
+import app.models
+
 celery_app = Celery(
     "detectops",
     broker="redis://localhost:6379/0",

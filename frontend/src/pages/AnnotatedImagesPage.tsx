@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Container, Typography, CircularProgress, Alert, Grid, IconButton, Box } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import api from '../services/api';
+import { getAnnotatedImages, getAnnotations, deleteAnnotation } from '../services/api';
+import { useParams } from 'react-router-dom';
 
 // Define the types for the data we'll be fetching
 interface AnnotatedImageInfo {
@@ -62,8 +63,7 @@ const AnnotatedImage: React.FC<{
             top: 0,
             width: '100%',
             height: '100%',
-            // Allow pointer events for the bounding boxes themselves
-            pointerEvents: 'none', 
+            pointerEvents: 'none',
           }}
           viewBox={`0 0 ${imgSize.w} ${imgSize.h}`}
           preserveAspectRatio="xMidYMid meet"
@@ -71,11 +71,10 @@ const AnnotatedImage: React.FC<{
           {image.annotations.map((anno) => {
             const isHovered = anno.id === hoveredAnnotationId;
             return (
-              <g 
-                key={anno.id} 
-                onMouseEnter={() => setHoveredAnnotationId(anno.id)} 
+              <g
+                key={anno.id}
+                onMouseEnter={() => setHoveredAnnotationId(anno.id)}
                 onMouseLeave={() => setHoveredAnnotationId(null)}
-                // Allow interactions on the group
                 style={{ pointerEvents: 'auto' }}
               >
                 <rect
@@ -98,14 +97,14 @@ const AnnotatedImage: React.FC<{
                 </text>
                 {isHovered && (
                   <foreignObject
-                    x={anno.x * imgSize.w + anno.w * imgSize.w - 30} // Position near top-right corner
+                    x={anno.x * imgSize.w + anno.w * imgSize.w - 30}
                     y={anno.y * imgSize.h + 5}
                     width="25"
                     height="25"
                     style={{ pointerEvents: 'auto' }}
                   >
-                    <IconButton 
-                      size="small" 
+                    <IconButton
+                      size="small"
                       onClick={(e) => { e.stopPropagation(); onDelete(anno.id, image.id); }}
                       sx={{ background: 'rgba(0,0,0,0.7)', padding: '2px' }}
                     >
@@ -122,45 +121,34 @@ const AnnotatedImage: React.FC<{
   );
 };
 
-
 const AnnotatedImagesPage: React.FC = () => {
+  const { projectId } = useParams<{ projectId: string }>();
   const [images, setImages] = useState<ImageWithAnnotations[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchAnnotatedImages = async () => {
+  const fetchAnnotatedImages = useCallback(async () => {
+    if (!projectId) return;
     setLoading(true);
     setError(null);
     try {
-      // 1. Fetch the list of annotated images
-      const imageListResponse = await api.get<{ images: AnnotatedImageInfo[] }>('/images/annotated');
+      const imageListResponse = await getAnnotatedImages(Number(projectId), 1, 50); // Fetching up to 50, pagination can be added here
       const imageList = imageListResponse.data.images;
-      console.log('Received data from /images/annotated:', imageList);
 
-      // Guard against non-array response from the backend
       if (!Array.isArray(imageList)) {
-        throw new Error("Received invalid data from the server. Expected an array of images.");
+        throw new Error("Received invalid data from the server.");
       }
-
       if (imageList.length === 0) {
         setImages([]);
         setLoading(false);
         return;
       }
 
-      // 2. For each image, fetch its annotations
       const imagePromises = imageList.map(async (image) => {
-        const annotationsResponse = await api.get<Annotation[]>(`/annotations/${image.id}`);
-        console.log(`Annotations for image ${image.id}:`, annotationsResponse.data);
-
-        let annotations: Annotation[] = [];
-        if (annotationsResponse.data && Array.isArray(annotationsResponse.data)) {
-          annotations = annotationsResponse.data;
-        }
-
+        const annotationsResponse = await getAnnotations(Number(projectId), image.id);
         return {
           ...image,
-          annotations: annotations,
+          annotations: annotationsResponse.data || [],
         };
       });
 
@@ -172,38 +160,17 @@ const AnnotatedImagesPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
+  }, [projectId]);
 
   useEffect(() => {
     fetchAnnotatedImages();
-  }, []);
+  }, [fetchAnnotatedImages]);
 
   const handleDeleteAnnotation = async (annotationId: number, imageId: number) => {
+    if (!projectId) return;
     try {
-      await api.delete(`/annotations/delete/${annotationId}/${imageId}`);
-      
-      // Update the state to remove the annotation
-      setImages(currentImages => {
-        const updatedImages = currentImages.map(img => {
-          if (img.id === imageId) {
-            const updatedAnnotations = img.annotations.filter(anno => anno.id !== annotationId);
-            return { ...img, annotations: updatedAnnotations };
-          }
-          return img;
-        });
-
-        // If an image has no more annotations, we might want to remove it from the list
-        // or refetch the annotated images list. For now, we'll just update the annotations.
-        // If an image has no more annotations we will refetch the list.
-        const image = updatedImages.find(img => img.id === imageId);
-        if(image && image.annotations.length === 0){
-            fetchAnnotatedImages();
-        }
-
-        return updatedImages.filter(img => img.annotations.length > 0);
-      });
-
+      await deleteAnnotation(Number(projectId), annotationId, imageId);
+      fetchAnnotatedImages(); // Refetch all data to ensure consistency
     } catch (_err) {
       setError('Failed to delete annotation.');
     }
@@ -231,11 +198,11 @@ const AnnotatedImagesPage: React.FC = () => {
         Annotated Images
       </Typography>
       {images.length === 0 ? (
-        <Alert severity="info">No annotated images found.</Alert>
+        <Alert severity="info">No annotated images found in this project.</Alert>
       ) : (
         <Grid container spacing={4}>
           {images.map((image) => (
-            <Grid xs={12} sm={6} md={4} key={image.id}>
+            <Grid item xs={12} sm={6} md={4} key={image.id}>
               <AnnotatedImage image={image} onDelete={handleDeleteAnnotation} />
             </Grid>
           ))}
@@ -246,3 +213,4 @@ const AnnotatedImagesPage: React.FC = () => {
 };
 
 export default AnnotatedImagesPage;
+

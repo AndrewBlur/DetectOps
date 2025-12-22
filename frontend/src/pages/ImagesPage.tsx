@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Container, Typography, Box, CircularProgress, Alert, Button, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
-import api from '../services/api';
+import { useNavigate, useParams } from 'react-router-dom';
+import { getImages, deleteImage } from '../services/api';
 import ImageUpload from '../components/ImageUpload';
 import ImageGallery from '../components/ImageGallery';
 
@@ -19,6 +19,7 @@ interface PaginatedImageResponse {
 }
 
 const ImagesPage: React.FC = () => {
+  const { projectId } = useParams<{ projectId: string }>();
   const [images, setImages] = useState<Image[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,13 +31,12 @@ const ImagesPage: React.FC = () => {
   const navigate = useNavigate();
 
   const fetchImages = useCallback(async () => {
+    if (!projectId) return;
     setLoading(true);
     setError(null);
     setSelectedImages([]);
     try {
-      const response = await api.get<PaginatedImageResponse>('/images/mine', {
-        params: { page, page_size: pageSize },
-      });
+      const response = await getImages(Number(projectId), page, pageSize);
       setImages(response.data.images);
       setTotalImages(response.data.total);
 
@@ -45,7 +45,7 @@ const ImagesPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize]);
+  }, [page, pageSize, projectId]);
 
   useEffect(() => {
     fetchImages();
@@ -65,10 +65,11 @@ const ImagesPage: React.FC = () => {
   };
 
   const handleDeleteSelected = async () => {
+    if (!projectId) return;
     setLoading(true);
     setError(null);
     try {
-      await Promise.all(selectedImages.map(id => api.delete(`/images/${id}`)));
+      await Promise.all(selectedImages.map(id => deleteImage(Number(projectId), id)));
       setSelectedImages([]);
       fetchImages();
     } catch (err: any) {
@@ -82,7 +83,7 @@ const ImagesPage: React.FC = () => {
     <Container maxWidth="lg">
       <Box sx={{ my: 4 }}>
         <Typography variant="h4" gutterBottom>
-          Your Image Dashboard
+          Image Dashboard
         </Typography>
 
         <Box sx={{ mb: 4 }}>
@@ -90,13 +91,13 @@ const ImagesPage: React.FC = () => {
         </Box>
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h5">Your Uploaded Images</Typography>
+          <Typography variant="h5">Uploaded Images</Typography>
 
           <FormControl size="small" sx={{minWidth: 120}}>
             <InputLabel id="page-size-label">Images per page</InputLabel>
             <Select
               labelId="page-size-label"
-              value={pageSize}
+              value={String(pageSize)}
               onChange={(e: SelectChangeEvent<string>) => {
                 setPageSize(Number(e.target.value));
                 setPage(1);
@@ -139,3 +140,4 @@ const ImagesPage: React.FC = () => {
 };
 
 export default ImagesPage;
+

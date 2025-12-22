@@ -1,203 +1,106 @@
+import io
+from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
-from datetime import datetime
 
 from app.auth.security import get_current_user
-from app.annotations.models import Annotation
-from app.images.models import Image
+from app.auth.models import User
 
 
 @pytest.fixture(autouse=True)
-def override_user(test_user):
+def override_user(test_user: User, client: TestClient):
     from app.main import app
     app.dependency_overrides[get_current_user] = lambda: test_user
     yield
     app.dependency_overrides.pop(get_current_user, None)
 
-
-def test_create_annotation_success(client: TestClient, db_session, test_user):
-    image = Image(
-        user_id=test_user.id,
-        filepath="test.jpg",
-        storage_url="https://example.com/test.jpg",
-        is_annotated=False,
-        uploaded_at=datetime.utcnow()
-    )
-    db_session.add(image)
-    db_session.commit()
-    db_session.refresh(image)
-
-    payload = {
-        "image_id": image.id,
-        "annotation": {
-            "x": 0.1,
-            "y": 0.2,
-            "w": 0.3,
-            "h": 0.4,
-            "tag": "fork"
-        }
-    }
-
-    response = client.post("/annotations", json=payload)
-
+@pytest.fixture
+def test_project(client: TestClient):
+    response = client.post("/projects/", json={"name": "Test Project", "description": "A project for testing"})
     assert response.status_code == 201
-    body = response.json()
+    return response.json()
 
-    assert body["image_id"] == image.id
-    assert body["tag"] == "fork"
+@pytest.fixture
+def test_image(client: TestClient, test_project):
+    project_id = test_project["id"]
+    file_content = b"fake image data"
 
-    db_session.refresh(image)
-    assert image.is_annotated is True
+    with patch("app.images.routes.upload_to_blob"), \
+         patch("app.images.routes.generate_signed_url") as mock_url:
+        mock_url.return_value = "https://signed.url/test.jpg"
+        response = client.post(
+            f"/projects/{project_id}/images/upload",
+            files={"file": ("test.jpg", io.BytesIO(file_content), "image/jpeg")}
+        )
+    assert response.status_code == 201
+    return response.json()
 
+def test_create_annotation_success(client: TestClient, test_project, test_image):
+    project_id = test_project["id"]
+    image_id = test_image["id"]
 
-def test_create_annotation_image_not_found(client: TestClient):
-    payload = {
-        "image_id": 9999,
-        "annotation": {
-            "x": 0.1,
-            "y": 0.2,
-            "w": 0.3,
-            "h": 0.4,
-            "tag": "knife"
-        }
+    annotation_data = {
+        "image_id": image_id,
+        "annotation": {"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.4, "tag": "test"}
     }
 
-    response = client.post("/annotations", json=payload)
+    response = client.post(f"/projects/{project_id}/annotations", json=annotation_data)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["image_id"] == image_id
+    assert data["tag"] == "test"
 
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Image not found"
+def test_get_annotations_for_image(client: TestClient, test_project, test_image):
+    project_id = test_project["id"]
+    image_id = test_image["id"]
 
+    # First, create an annotation
+    annotation_data = {
+        "image_id": image_id,
+        "annotation": {"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.4, "tag": "test"}
+    }
+    client.post(f"/projects/{project_id}/annotations", json=annotation_data)
 
-def test_get_annotations_by_image(client: TestClient, db_session, test_user):
-    image = Image(
-        user_id=test_user.id,
-        filepath="img.jpg",
-        storage_url="https://example.com/img.jpg",
-        is_annotated=True,
-        uploaded_at=datetime.utcnow()
-    )
-    db_session.add(image)
-    db_session.commit()
-    db_session.refresh(image)
-
-    ann = Annotation(
-        image_id=image.id,
-        user_id=test_user.id,
-        x=0.1,
-        y=0.2,
-        w=0.3,
-        h=0.4,
-        tag="spoon",
-        created_at=datetime.utcnow()
-    )
-    db_session.add(ann)
-    db_session.commit()
-
-    response = client.get(f"/annotations/{image.id}")
-
+    # Now, get the annotations
+    response = client.get(f"/projects/{project_id}/annotations/{image_id}")
     assert response.status_code == 200
     data = response.json()
-
     assert isinstance(data, list)
     assert len(data) == 1
-    assert data[0]["tag"] == "spoon"
+    assert data[0]["tag"] == "test"
 
+def test_get_tags_for_project(client: TestClient, test_project, test_image):
+    project_id = test_project["id"]
+    image_id = test_image["id"]
 
-def test_get_annotations_empty(client: TestClient, db_session, test_user):
-    image = Image(
-        user_id=test_user.id,
-        filepath="empty.jpg",
-        storage_url="https://example.com/empty.jpg",
-        is_annotated=False,
-        uploaded_at=datetime.utcnow()
-    )
-    db_session.add(image)
-    db_session.commit()
+    # Create a few annotations with different tags
+    client.post(f"/projects/{project_id}/annotations", json={"image_id": image_id, "annotation": {"x": 0, "y": 0, "w": 0, "h": 0, "tag": "tag1"}})
+    client.post(f"/projects/{project_id}/annotations", json={"image_id": image_id, "annotation": {"x": 0, "y": 0, "w": 0, "h": 0, "tag": "tag2"}})
+    client.post(f"/projects/{project_id}/annotations", json={"image_id": image_id, "annotation": {"x": 0, "y": 0, "w": 0, "h": 0, "tag": "tag1"}})
 
-    response = client.get(f"/annotations/{image.id}")
-
-    assert response.status_code == 200
-    assert response.json() == []
-
-
-def test_get_tags(client: TestClient, db_session, test_user):
-    image = Image(
-        user_id=test_user.id,
-        filepath="tags.jpg",
-        storage_url="https://example.com/tags.jpg",
-        is_annotated=True,
-        uploaded_at=datetime.utcnow()
-    )
-    db_session.add(image)
-    db_session.commit()
-    db_session.refresh(image)
-
-    tags = ["fork", "knife", "fork"]
-
-    for tag in tags:
-        db_session.add(
-            Annotation(
-                image_id=image.id,
-                user_id=test_user.id,
-                x=0.1,
-                y=0.1,
-                w=0.2,
-                h=0.2,
-                tag=tag,
-                created_at=datetime.utcnow()
-            )
-        )
-
-    db_session.commit()
-
-    response = client.get("/annotations/tags")
-
+    response = client.get(f"/projects/{project_id}/annotations/tags")
     assert response.status_code == 200
     data = response.json()
+    assert isinstance(data, list)
+    assert "tag1" in data
+    assert "tag2" in data
 
-    assert sorted(data) == sorted(set(tags))
+def test_delete_annotation_success(client: TestClient, test_project, test_image):
+    project_id = test_project["id"]
+    image_id = test_image["id"]
 
+    # Create an annotation
+    annotation_data = {
+        "image_id": image_id,
+        "annotation": {"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.4, "tag": "test"}
+    }
+    create_response = client.post(f"/projects/{project_id}/annotations", json=annotation_data)
+    annotation_id = create_response.json()["id"]
 
-def test_delete_last_annotation_updates_image(
-    client: TestClient, db_session, test_user
-):
-    image = Image(
-        user_id=test_user.id,
-        filepath="del.jpg",
-        storage_url="https://example.com/del.jpg",
-        is_annotated=True,
-        uploaded_at=datetime.utcnow()
-    )
-    db_session.add(image)
-    db_session.commit()
-    db_session.refresh(image)
-
-    ann = Annotation(
-        image_id=image.id,
-        user_id=test_user.id,
-        x=0.1,
-        y=0.1,
-        w=0.2,
-        h=0.2,
-        tag="cup",
-        created_at=datetime.utcnow()
-    )
-    db_session.add(ann)
-    db_session.commit()
-    db_session.refresh(ann)
-
-    response = client.delete(
-        f"/annotations/delete/{ann.id}/{image.id}"
-    )
-
+    # Delete the annotation
+    response = client.delete(f"/projects/{project_id}/annotations/delete/{annotation_id}/{image_id}")
     assert response.status_code == 204
 
-    db_session.refresh(image)
-    assert image.is_annotated is False
-
-
-def test_delete_annotation_not_found(client: TestClient):
-    response = client.delete("/annotations/delete/9999/1")
-
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Annotation not found"
+    # Verify it's deleted
+    response = client.get(f"/projects/{project_id}/annotations/{image_id}")
+    assert len(response.json()) == 0

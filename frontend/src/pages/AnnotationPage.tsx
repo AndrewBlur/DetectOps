@@ -1,146 +1,124 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Container, Typography, Box, CircularProgress, Alert, Button } from '@mui/material';
-import api from '../services/api';
+import { useParams, useNavigate } from 'react-router-dom';
+import { getImage, getAnnotations, createAnnotation, getTags, deleteAnnotation, getImages } from '../services/api';
 import { Annotator, type BoxType } from '../components/Annotator';
 
 interface Image {
   id: number;
   filepath: string;
   storage_url: string;
-  uploaded_at: string;
 }
-
-interface PaginatedImageResponse {
-  images: Image[];
-  total: number;
-}
-
-// Map from imageId to its annotations
-type AnnotationsMap = {
-  [imageId: number]: BoxType[];
-};
 
 const AnnotationPage: React.FC = () => {
-  const [images, setImages] = useState<Image[]>([]);
+  const { projectId, imageId } = useParams<{ projectId: string; imageId: string }>();
+  const navigate = useNavigate();
+
+  const [image, setImage] = useState<Image | null>(null);
+  const [boxes, setBoxes] = useState<BoxType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
-  const [allAnnotations, setAllAnnotations] = useState<AnnotationsMap>({});
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [existingTags, setExistingTags] = useState<string[]>([]);
 
-
-  const fetchUnannotatedImages = useCallback(async () => {
+  const fetchData = useCallback(async () => {
+    if (!projectId || !imageId) return;
     setLoading(true);
     setError(null);
     try {
-      // Fetch all pages of unannotated images
-      let allImages: Image[] = [];
-      let page = 1;
-      let total = 0;
-      const pageSize = 50; // Fetch 50 at a time
+      const [imageResponse, annotationsResponse, tagsResponse] = await Promise.all([
+        getImage(Number(projectId), Number(imageId)),
+        getAnnotations(Number(projectId), Number(imageId)),
+        getTags(Number(projectId)),
+      ]);
 
-      do {
-        const response = await api.get<PaginatedImageResponse>('/images/mine', {
-          params: { page, page_size: pageSize },
-        });
-        allImages = [...allImages, ...response.data.images];
-        total = response.data.total;
-        page++;
-      } while (allImages.length < total);
-      
-      setImages(allImages);
-      // Initialize annotations map
-      const initialAnnotations: AnnotationsMap = {};
-      for (const image of allImages) {
-        initialAnnotations[image.id] = [];
-      }
-      setAllAnnotations(initialAnnotations);
+      setImage(imageResponse.data);
+      setBoxes(annotationsResponse.data.map(anno => ({
+        x: anno.x,
+        y: anno.y,
+        w: anno.w,
+        h: anno.h,
+        tag: anno.tag,
+      })));
+      setExistingTags(tagsResponse.data);
 
     } catch (err) {
-      setError((err as Error).message || 'Failed to fetch images for annotation.');
+      setError((err as Error).message || 'Failed to fetch data.');
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  const fetchTags = useCallback(async () => {
-    try {
-      const response = await api.get<string[]>('/annotations/tags');
-      setExistingTags(response.data);
-    } catch (err) {
-      console.error("Could not fetch existing tags", err);
-      // Non-fatal, user can still type tags
-    }
-  }, []);
+  }, [projectId, imageId]);
 
   useEffect(() => {
-    fetchUnannotatedImages();
-    fetchTags();
-  }, [fetchUnannotatedImages, fetchTags]);
+    fetchData();
+  }, [fetchData]);
 
-
-
-  const handleBoxesChange = (boxes: BoxType[]) => {
-    const imageId = images[currentImageIndex].id;
-    setAllAnnotations(prev => ({
-      ...prev,
-      [imageId]: boxes,
-    }));
+  const handleBoxesChange = (newBoxes: BoxType[]) => {
+    setBoxes(newBoxes);
   };
 
   const handleNewTag = (tag: string) => {
     setExistingTags(prev => [...prev, tag]);
-  }
-
-  const goToNext = () => {
-    setCurrentImageIndex(i => Math.min(i + 1, images.length - 1));
   };
 
-  const goToPrev = () => {
-    setCurrentImageIndex(i => Math.max(0, i - 1));
-  };
-  
-  const handleSubmitAll = async () => {
+  const handleSubmit = async () => {
+    if (!projectId || !imageId) return;
+
     setIsSubmitting(true);
     setError(null);
     setSubmitSuccess(null);
 
-    const annotationPromises: Promise<void>[] = [];
+    try {
+      // First, delete all existing annotations for this image
+      const existingAnnotations = await getAnnotations(Number(projectId), Number(imageId));
+      await Promise.all(
+        existingAnnotations.data.map(anno =>
+          deleteAnnotation(Number(projectId), anno.id, Number(imageId))
+        )
+      );
 
-    for (const imageId in allAnnotations) {
-      const boxes = allAnnotations[imageId];
-      if (boxes.length > 0) {
-        for (const box of boxes) {
-          const payload = {
-            image_id: Number(imageId),
-            annotation: {
-              x: box.x,
-              y: box.y,
-              w: box.w,
-              h: box.h,
-              tag: box.tag || 'untagged',
-            },
-          };
-          annotationPromises.push(api.post('/annotations', payload));
+      // Then, create all the new annotations
+      const annotationPromises = boxes.map(box => {
+        const payload = {
+          image_id: Number(imageId),
+          annotation: {
+            x: box.x,
+            y: box.y,
+            w: box.w,
+            h: box.h,
+            tag: box.tag || 'untagged',
+          },
+        };
+        return createAnnotation(Number(projectId), payload);
+      });
+
+      if (annotationPromises.length === 0) {
+        // This means we just cleared the annotations
+        setSubmitSuccess("All annotations for this image have been cleared.");
+        setTimeout(() => navigate(`/projects/${projectId}/images`), 1500);
+      } else {
+        await Promise.all(annotationPromises);
+
+        // Fetch the next image to annotate
+        const nextImagesResponse = await getImages(Number(projectId), 1, 1);
+        if (nextImagesResponse.data.images.length > 0) {
+          const nextImageId = nextImagesResponse.data.images[0].id;
+          setSubmitSuccess("Annotations submitted successfully! Loading next image...");
+          setTimeout(() => {
+            navigate(`/projects/${projectId}/images/${nextImageId}/annotate`);
+            // Force a reload of the component since we are navigating to the same route with different params
+            // React Router 6 handles this by just updating the params, so the useEffect hook with [projectId, imageId] dependency handles data fetching.
+            // However, we need to reset component state for the new image.
+            setBoxes([]);
+            setImage(null);
+            setSubmitSuccess(null);
+          }, 1000);
+        } else {
+          setSubmitSuccess("All images annotated!");
+          setTimeout(() => navigate(`/projects/${projectId}/images`), 1500);
         }
       }
-    }
-
-    if (annotationPromises.length === 0) {
-      setError("No annotations to submit.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    try {
-      await Promise.all(annotationPromises);
-      setSubmitSuccess("All annotations submitted successfully!");
-      // Refetch to clear the list and refresh tags
-      fetchUnannotatedImages();
-      fetchTags();
-      setCurrentImageIndex(0);
 
     } catch (err) {
       setError((err as Error).message || "An error occurred during submission.");
@@ -149,77 +127,48 @@ const AnnotationPage: React.FC = () => {
     }
   };
 
-
-  const currentImage = images[currentImageIndex];
-  const currentBoxes = currentImage ? allAnnotations[currentImage.id] : [];
-
   if (loading) {
-    return (
-      <Container sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
-        <CircularProgress />
-      </Container>
-    );
+    return <Container sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}><CircularProgress /></Container>;
   }
 
   if (error) {
-    return (
-      <Container sx={{ mt: 4 }}>
-        <Alert severity="error">{error}</Alert>
-      </Container>
-    );
+    return <Container sx={{ mt: 4 }}><Alert severity="error">{error}</Alert></Container>;
   }
 
-  if (images.length === 0) {
-    return (
-        <Container sx={{ mt: 4 }}>
-            <Alert severity="info">No images to annotate.</Alert>
-        </Container>
-    )
+  if (!image) {
+    return <Container sx={{ mt: 4 }}><Alert severity="info">Image not found.</Alert></Container>;
   }
 
   return (
     <Container maxWidth="xl" sx={{ my: 4 }}>
-        <Typography variant="h4" gutterBottom>
-            Annotate Images ({currentImageIndex + 1} of {images.length})
-        </Typography>
+      <Typography variant="h4" gutterBottom>
+        Annotate Image
+      </Typography>
 
-        {submitSuccess && <Alert severity="success" sx={{mb: 2}}>{submitSuccess}</Alert>}
+      {submitSuccess && <Alert severity="success" sx={{ mb: 2 }}>{submitSuccess}</Alert>}
 
-        {currentImage && (
-            <Annotator
-                key={currentImage.id} // Important to re-mount the component for a new image
-                imageUrl={currentImage.storage_url}
-                boxes={currentBoxes}
-                onBoxesChange={handleBoxesChange}
-                existingTags={existingTags}
-                onNewTag={handleNewTag}
-            />
-        )}
+      <Annotator
+        key={image.id}
+        imageUrl={image.storage_url}
+        boxes={boxes}
+        onBoxesChange={handleBoxesChange}
+        existingTags={existingTags}
+        onNewTag={handleNewTag}
+      />
 
-
-
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, gap: 2 }}>
-            <Button variant="outlined" onClick={goToPrev} disabled={currentImageIndex <= 0}>
-                Previous
-            </Button>
-            <Button variant="outlined" onClick={goToNext} disabled={currentImageIndex >= images.length - 1}>
-                Next
-            </Button>
-        </Box>
-
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-            <Button 
-                variant="contained" 
-                color="primary" 
-                onClick={handleSubmitAll}
-                disabled={isSubmitting || Object.values(allAnnotations).every(b => b.length === 0)}
-            >
-                {isSubmitting ? <CircularProgress size={24} /> : 'Submit All Annotations'}
-            </Button>
-        </Box>
-
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? <CircularProgress size={24} /> : 'Save Annotations'}
+        </Button>
+      </Box>
     </Container>
   );
 };
 
 export default AnnotationPage;
+
