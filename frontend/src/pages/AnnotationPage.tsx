@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Container, Typography, Box, CircularProgress, Alert, Button } from '@mui/material';
+import { Container, Typography, Box, CircularProgress, Alert, Button, Card, CardContent } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getImage, getAnnotations, createAnnotation, getTags, deleteAnnotation, getImages } from '../services/api';
 import { Annotator, type BoxType } from '../components/Annotator';
@@ -34,7 +35,7 @@ const AnnotationPage: React.FC = () => {
       ]);
 
       setImage(imageResponse.data);
-      setBoxes(annotationsResponse.data.map(anno => ({
+      setBoxes(annotationsResponse.data.map((anno: any) => ({
         x: anno.x,
         y: anno.y,
         w: anno.w,
@@ -73,7 +74,7 @@ const AnnotationPage: React.FC = () => {
       // First, delete all existing annotations for this image
       const existingAnnotations = await getAnnotations(Number(projectId), Number(imageId));
       await Promise.all(
-        existingAnnotations.data.map(anno =>
+        existingAnnotations.data.map((anno: any) =>
           deleteAnnotation(Number(projectId), anno.id, Number(imageId))
         )
       );
@@ -141,31 +142,61 @@ const AnnotationPage: React.FC = () => {
 
   return (
     <Container maxWidth="xl" sx={{ my: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Annotate Image
-      </Typography>
-
-      {submitSuccess && <Alert severity="success" sx={{ mb: 2 }}>{submitSuccess}</Alert>}
-
-      <Annotator
-        key={image.id}
-        imageUrl={image.storage_url}
-        boxes={boxes}
-        onBoxesChange={handleBoxesChange}
-        existingTags={existingTags}
-        onNewTag={handleNewTag}
-      />
-
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
         <Button
-          variant="contained"
-          color="primary"
-          onClick={handleSubmit}
-          disabled={isSubmitting}
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate(`/projects/${projectId}/images`)}
+          sx={{ mr: 2, color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
         >
-          {isSubmitting ? <CircularProgress size={24} /> : 'Save Annotations'}
+          Back to Images
         </Button>
       </Box>
+
+      <Card sx={{ overflow: 'visible' }}> {/* Allow annotator handles to overflow if needed, though they shouldn't */}
+        <CardContent sx={{ p: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>
+              Annotate Image
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {image.filepath.split('/').pop()} // ID: {image.id}
+            </Typography>
+          </Box>
+
+          {submitSuccess && <Alert severity="success" sx={{ mb: 3 }}>{submitSuccess}</Alert>}
+
+          <Box sx={{ minHeight: '600px', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', bgcolor: 'background.default', p: 2, borderRadius: 2 }}>
+            <Annotator
+              key={image.id}
+              imageUrl={image.storage_url}
+              boxes={boxes}
+              onBoxesChange={handleBoxesChange}
+              existingTags={existingTags}
+              onNewTag={handleNewTag}
+            />
+          </Box>
+
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+            <Button
+              variant="outlined"
+              color="inherit"
+              onClick={() => navigate(`/projects/${projectId}/images`)}
+              sx={{ mr: 2 }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              size="large"
+            >
+              {isSubmitting ? <CircularProgress size={24} color="inherit" /> : 'Save & Next'}
+            </Button>
+          </Box>
+        </CardContent>
+      </Card>
     </Container>
   );
 };

@@ -1,11 +1,13 @@
 import React, { useMemo } from 'react';
-import { Outlet, NavLink, useNavigate, useParams } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useParams, useLocation } from 'react-router-dom';
 
-// MUI components and functions (VALUES)
-import { styled } from '@mui/material/styles';
+// MUI components and functions
+import { styled, useTheme } from '@mui/material/styles';
+import type { Theme, CSSObject } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import MuiDrawer from '@mui/material/Drawer';
 import MuiAppBar from '@mui/material/AppBar';
+import type { AppBarProps as MuiAppBarProps } from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import List from '@mui/material/List';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -16,8 +18,9 @@ import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
+import Tooltip from '@mui/material/Tooltip';
 
-// MUI Icons (VALUES)
+// MUI Icons
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -27,15 +30,10 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
 
-// MUI types (TYPES)
-import type { Theme } from '@mui/material';
-import type { AppBarProps as MuiAppBarProps } from '@mui/material';
-import type { CSSObject } from '@mui/system';
-
-// App-specific context hook (VALUE)
+// App-specific context hook
 import { useAuth } from '../contexts/AuthContext';
 
-const drawerWidth = 240;
+const drawerWidth = 260;
 
 const openedMixin = (theme: Theme): CSSObject => ({
   width: drawerWidth,
@@ -54,15 +52,15 @@ const closedMixin = (theme: Theme): CSSObject => ({
   overflowX: 'hidden',
   width: `calc(${theme.spacing(7)} + 1px)`,
   [theme.breakpoints.up('sm')]: {
-    width: `calc(${theme.spacing(8)} + 1px)`,
+    width: `calc(${theme.spacing(9)} + 1px)`,
   },
 });
 
 const DrawerHeader = styled('div')(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'flex-end',
-  padding: theme.spacing(0, 1),
+  justifyContent: 'space-between',
+  padding: theme.spacing(0, 2),
   // necessary for content to be below app bar
   ...theme.mixins.toolbar,
 }));
@@ -107,6 +105,7 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
 );
 
 export default function AppLayout() {
+  const theme = useTheme();
   const [open, setOpen] = React.useState(true);
   const { logout } = useAuth();
   const navigate = useNavigate();
@@ -116,7 +115,6 @@ export default function AppLayout() {
     { text: 'Back to Projects', icon: <ArrowBackIcon />, path: '/projects' },
     { text: 'Your Images', icon: <PhotoLibraryIcon />, path: `/projects/${projectId}/images` },
     { text: 'Annotated', icon: <PlaylistAddCheckIcon />, path: `/projects/${projectId}/annotated` },
-    // 'Annotate' link removed as it requires specific image context
     { text: 'Predictions', icon: <OnlinePredictionIcon />, path: `/projects/${projectId}/predictions` },
   ], [projectId]);
 
@@ -137,7 +135,7 @@ export default function AppLayout() {
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
       <AppBar position="fixed" open={open}>
-        <Toolbar>
+        <Toolbar sx={{ height: 70 }}>
           <IconButton
             color="inherit"
             aria-label="open drawer"
@@ -150,94 +148,104 @@ export default function AppLayout() {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div">
-            DetectOps Workspace
+          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700, letterSpacing: '0.05em' }}>
+            Vision Workspace
           </Typography>
         </Toolbar>
       </AppBar>
       <Drawer variant="permanent" open={open}>
         <DrawerHeader>
+          <Typography variant="subtitle1" fontWeight="bold" sx={{ color: theme.palette.primary.main }}>
+            DetectOps
+          </Typography>
           <IconButton onClick={handleDrawerClose}>
             <ChevronLeftIcon />
           </IconButton>
         </DrawerHeader>
-        <Divider />
-        <List>
+        <Divider sx={{ opacity: 0.5 }} />
+        <List sx={{ px: 1, py: 2 }}>
           {navItems.map((item) => (
-            <ListItem key={item.text} disablePadding sx={{ display: 'block' }}>
+            <ListItem key={item.text} disablePadding sx={{ display: 'block', mb: 0.5 }}>
+              <Tooltip title={open ? '' : item.text} placement="right">
+                <ListItemButton
+                  component={NavLink}
+                  to={item.path}
+                  end={item.path === '/projects'}
+                  sx={{
+                    minHeight: 48,
+                    justifyContent: open ? 'initial' : 'center',
+                    px: 2.5,
+                    borderRadius: 2,
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 0,
+                      mr: open ? 2 : 'auto',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText primary={item.text} sx={{ opacity: open ? 1 : 0 }} primaryTypographyProps={{ fontWeight: 500 }} />
+                </ListItemButton>
+              </Tooltip>
+            </ListItem>
+          ))}
+        </List>
+        <Divider sx={{ opacity: 0.5 }} />
+        <List sx={{ marginTop: 'auto', px: 1, pb: 2 }}>
+          <ListItem disablePadding sx={{ display: 'block', mb: 0.5 }}>
+            <Tooltip title={open ? '' : "Settings"} placement="right">
               <ListItemButton
                 component={NavLink}
-                to={item.path}
+                to={`/projects/${projectId}/settings`}
                 sx={{
                   minHeight: 48,
                   justifyContent: open ? 'initial' : 'center',
                   px: 2.5,
-                  '&.active': {
-                    backgroundColor: 'primary.main',
-                    color: 'primary.contrastText',
-                    '& .MuiListItemIcon-root': {
-                      color: 'primary.contrastText',
-                    },
-                  },
+                  borderRadius: 2,
                 }}
               >
                 <ListItemIcon
                   sx={{
                     minWidth: 0,
-                    mr: open ? 3 : 'auto',
+                    mr: open ? 2 : 'auto',
                     justifyContent: 'center',
                   }}
                 >
-                  {item.icon}
+                  <SettingsIcon />
                 </ListItemIcon>
-                <ListItemText primary={item.text} sx={{ opacity: open ? 1 : 0 }} />
+                <ListItemText primary="Settings" sx={{ opacity: open ? 1 : 0 }} primaryTypographyProps={{ fontWeight: 500 }} />
               </ListItemButton>
-            </ListItem>
-          ))}
-        </List>
-        <Divider />
-        <List sx={{ marginTop: 'auto' }}>
-          <ListItem disablePadding sx={{ display: 'block' }}>
-            <ListItemButton
-              component={NavLink}
-              to={`/projects/${projectId}/settings`}
-              sx={{
-                minHeight: 48,
-                justifyContent: open ? 'initial' : 'center',
-                px: 2.5,
-                '&.active': {
-                  backgroundColor: 'primary.main',
-                  color: 'primary.contrastText',
-                  '& .MuiListItemIcon-root': {
-                    color: 'primary.contrastText',
-                  },
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  minWidth: 0,
-                  mr: open ? 3 : 'auto',
-                  justifyContent: 'center',
-                }}
-              >
-                <SettingsIcon />
-              </ListItemIcon>
-              <ListItemText primary="Settings" sx={{ opacity: open ? 1 : 0 }} />
-            </ListItemButton>
+            </Tooltip>
           </ListItem>
           <ListItem disablePadding sx={{ display: 'block' }}>
-            <ListItemButton onClick={handleLogout} sx={{ minHeight: 48, justifyContent: open ? 'initial' : 'center', px: 2.5 }}>
-              <ListItemIcon sx={{ minWidth: 0, mr: open ? 3 : 'auto', justifyContent: 'center' }}>
-                <LogoutIcon />
-              </ListItemIcon>
-              <ListItemText primary="Logout" sx={{ opacity: open ? 1 : 0 }} />
-            </ListItemButton>
+            <Tooltip title={open ? '' : "Logout"} placement="right">
+              <ListItemButton onClick={handleLogout}
+                sx={{
+                  minHeight: 48,
+                  justifyContent: open ? 'initial' : 'center',
+                  px: 2.5,
+                  borderRadius: 2,
+                  color: theme.palette.error.main,
+                  '&:hover': {
+                    backgroundColor: theme.palette.action.hover, // Use theme active state
+                  },
+                  '& .MuiListItemIcon-root': {
+                    color: theme.palette.error.main,
+                  }
+                }}>
+                <ListItemIcon sx={{ minWidth: 0, mr: open ? 2 : 'auto', justifyContent: 'center' }}>
+                  <LogoutIcon />
+                </ListItemIcon>
+                <ListItemText primary="Logout" sx={{ opacity: open ? 1 : 0 }} primaryTypographyProps={{ fontWeight: 500 }} />
+              </ListItemButton>
+            </Tooltip>
           </ListItem>
         </List>
       </Drawer>
-      <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
-        <DrawerHeader />
+      <Box component="main" sx={{ flexGrow: 1, p: 4, mt: 8 }}>
         <Outlet />
       </Box>
     </Box>

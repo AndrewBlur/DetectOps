@@ -70,10 +70,10 @@ export const Annotator: React.FC<Props> = ({
     setImgSize({ w: 0, h: 0 });
     return () => img.removeEventListener("load", onLoad);
   }, [imageUrl]);
-  
+
   useEffect(() => {
     const img = imgRef.current;
-    if(img && img.naturalWidth > 0 && imgSize.w === 0) {
+    if (img && img.naturalWidth > 0 && imgSize.w === 0) {
       setImgSize({ w: img.naturalWidth, h: img.naturalHeight });
     }
   }, [imgRef, imageUrl, imgSize.w]);
@@ -132,25 +132,25 @@ export const Annotator: React.FC<Props> = ({
     setStartPx(null);
     setDrawingBox(null);
   };
-  
+
   const handleSaveTag = (tag: string | null) => {
-    if(!taggingBox || !tag){
-        handleCancelTag();
-        return;
+    if (!taggingBox || !tag) {
+      handleCancelTag();
+      return;
     }
-    
+
     if (!existingTags.includes(tag)) {
-        onNewTag(tag);
+      onNewTag(tag);
     }
 
     const newBox: BoxType = {
-        ...taggingBox,
-        id: uid(),
-        tag,
-        x: norm(taggingBox.x, imgSize.w),
-        y: norm(taggingBox.y, imgSize.h),
-        w: norm(taggingBox.w, imgSize.w),
-        h: norm(taggingBox.h, imgSize.h),
+      ...taggingBox,
+      id: uid(),
+      tag,
+      x: norm(taggingBox.x, imgSize.w),
+      y: norm(taggingBox.y, imgSize.h),
+      w: norm(taggingBox.w, imgSize.w),
+      h: norm(taggingBox.h, imgSize.h),
     };
     onBoxesChange([...boxes, newBox]);
     handleCancelTag();
@@ -158,7 +158,7 @@ export const Annotator: React.FC<Props> = ({
 
   const handleCancelTag = () => {
     if (popoverAnchor) {
-        document.body.removeChild(popoverAnchor);
+      document.body.removeChild(popoverAnchor);
     }
     setPopoverAnchor(null);
     setTaggingBox(null);
@@ -169,13 +169,13 @@ export const Annotator: React.FC<Props> = ({
   const updateBoxTag = (id: string, tag: string) => onBoxesChange(boxes.map((b) => (b.id === id ? { ...b, tag } : b)));
 
   const overlayRect = (b: BoxType | TempBox) => {
-    if(!containerRef.current || !imgSize.w || !imgSize.h) return { left: 0, top: 0, width: 0, height: 0 };
+    if (!containerRef.current || !imgSize.w || !imgSize.h) return { left: 0, top: 0, width: 0, height: 0 };
     const rect = containerRef.current.getBoundingClientRect();
     const scaleX = rect.width / imgSize.w;
     const scaleY = rect.height / imgSize.h;
-    
+
     if ('tag' in b) {
-         return { left: b.x * imgSize.w * scaleX, top: b.y * imgSize.h * scaleY, width: b.w * imgSize.w * scaleX, height: b.h * imgSize.h * scaleY };
+      return { left: b.x * imgSize.w * scaleX, top: b.y * imgSize.h * scaleY, width: b.w * imgSize.w * scaleX, height: b.h * imgSize.h * scaleY };
     }
     return { left: b.x * scaleX, top: b.y * scaleY, width: b.w * scaleX, height: b.h * scaleY };
   };
@@ -185,8 +185,9 @@ export const Annotator: React.FC<Props> = ({
       <Box
         ref={containerRef}
         sx={{
-          position: "relative", width: "auto", maxWidth: "80%",
-          border: "1px solid #444", userSelect: "none",
+          position: "relative", width: "auto", maxWidth: "100%",
+          boxShadow: 4, borderRadius: 1, overflow: 'hidden',
+          userSelect: "none",
           cursor: "crosshair",
           "& img": { maxWidth: "100%", height: "auto", display: "block" },
         }}
@@ -200,88 +201,119 @@ export const Annotator: React.FC<Props> = ({
             const r = overlayRect(b);
             const isHovered = b.id === hoveredBoxId;
             return (
-              <Box 
-                key={b.id} 
-                sx={{ position: 'absolute', ...r, border: isHovered ? '2px solid red' : '2px solid lime', pointerEvents: 'auto', cursor: 'pointer' }}
+              <Box
+                key={b.id}
+                sx={{
+                  position: 'absolute',
+                  ...r,
+                  borderWidth: 2,
+                  borderStyle: 'solid',
+                  borderColor: isHovered ? 'error.main' : 'success.main', // Using theme colors
+                  boxShadow: isHovered ? '0 0 8px rgba(255,0,0,0.5)' : 'none',
+                  pointerEvents: 'auto',
+                  cursor: 'pointer',
+                  transition: 'all 0.1s ease-in-out'
+                }}
                 onMouseEnter={() => setHoveredBoxId(b.id)}
                 onMouseLeave={() => setHoveredBoxId(null)}
               >
-                <Typography sx={{fontSize: 12, background: 'rgba(0,0,0,0.5)', color: 'white', padding: '2px 4px', width: 'fit-content' }}>
+                <Typography sx={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  bgcolor: isHovered ? 'error.main' : 'success.main',
+                  color: '#fff', // Always white text on colored bg
+                  px: 0.5,
+                  position: 'absolute',
+                  top: -24,
+                  left: -2,
+                  borderRadius: '4px 4px 0 0',
+                  boxShadow: 2
+                }}>
                   {b.tag}
                 </Typography>
+
                 {isHovered && (
-                    <Box sx={{position: 'absolute', top: -28, right: 0, background: 'rgba(0,0,0,0.7)', borderRadius: 1}}>
-                        <IconButton size="small" onClick={() => { const tag = prompt("New tag", b.tag ?? ""); if (tag) updateBoxTag(b.id, tag); }}>
-                            <EditIcon fontSize="inherit" sx={{color: 'white'}} />
-                        </IconButton>
-                        <IconButton size="small" onClick={() => removeBox(b.id)}>
-                            <DeleteIcon fontSize="inherit" sx={{color: 'red'}} />
-                        </IconButton>
-                    </Box>
+                  <Box sx={{
+                    position: 'absolute',
+                    top: -32,
+                    right: 0,
+                    bgcolor: 'background.paper',
+                    borderRadius: 1,
+                    boxShadow: 3,
+                    display: 'flex',
+                    zIndex: 10
+                  }}>
+                    <IconButton size="small" onClick={() => { const tag = prompt("New tag", b.tag ?? ""); if (tag) updateBoxTag(b.id, tag); }}>
+                      <EditIcon fontSize="small" color="primary" />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => removeBox(b.id)}>
+                      <DeleteIcon fontSize="small" color="error" />
+                    </IconButton>
+                  </Box>
                 )}
               </Box>
             );
           })}
-          {drawingBox && <Box sx={{ position: 'absolute', ...overlayRect(drawingBox), border: '2px dashed yellow', pointerEvents: 'none' }} />}
-          {taggingBox && <Box sx={{ position: 'absolute', ...overlayRect(taggingBox), border: '2px solid yellow', pointerEvents: 'none' }} />}
+          {drawingBox && <Box sx={{ position: 'absolute', ...overlayRect(drawingBox), border: '2px dashed', borderColor: 'warning.main', pointerEvents: 'none' }} />}
+          {taggingBox && <Box sx={{ position: 'absolute', ...overlayRect(taggingBox), border: '2px solid', borderColor: 'warning.main', pointerEvents: 'none' }} />}
         </Box>
       </Box>
 
-      <TagPopover 
+      <TagPopover
         anchorEl={popoverAnchor}
         onClose={handleCancelTag}
         onSave={handleSaveTag}
         existingTags={existingTags}
       />
-      {error && <Alert severity="error" onClose={() => setError(null)} sx={{position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)'}}>{error}</Alert>}
+      {error && <Alert severity="error" onClose={() => setError(null)} sx={{ position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', zIndex: 20, width: 'max-content' }}>{error}</Alert>}
     </Box>
   );
 };
 
 interface TagPopoverProps {
-    anchorEl: HTMLElement | null;
-    onClose: () => void;
-    onSave: (tag: string | null) => void;
-    existingTags: string[];
+  anchorEl: HTMLElement | null;
+  onClose: () => void;
+  onSave: (tag: string | null) => void;
+  existingTags: string[];
 }
 
 const TagPopover: React.FC<TagPopoverProps> = ({ anchorEl, onClose, onSave, existingTags }) => {
-    const [tagValue, setTagValue] = useState<string | null>(null);
+  const [tagValue, setTagValue] = useState<string | null>(null);
 
-    const handleSave = () => {
-        onSave(tagValue);
-        setTagValue(null);
-    }
-    
-    const handleClose = () => {
-        onClose();
-        setTagValue(null);
-    }
+  const handleSave = () => {
+    onSave(tagValue);
+    setTagValue(null);
+  }
 
-    return (
-        <Popover
-            open={Boolean(anchorEl)}
-            anchorEl={anchorEl}
-            onClose={handleClose}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-            transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-        >
-            <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, width: 250 }}>
-                <Typography>Tag this box</Typography>
-                <Autocomplete
-                    freeSolo
-                    value={tagValue}
-                    onChange={(_event, newValue) => setTagValue(newValue)}
-                    onInputChange={(_event, newInputValue) => setTagValue(newInputValue)}
-                    options={existingTags}
-                    renderInput={(params) => <TextField {...params} label="Select or type a tag" autoFocus />}
-                    size="small"
-                />
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1}}>
-                    <Button onClick={handleClose} size="small">Cancel</Button>
-                    <Button onClick={handleSave} variant="contained" size="small" disabled={!tagValue}>Save</Button>
-                </Box>
-            </Box>
-        </Popover>
-    )
+  const handleClose = () => {
+    onClose();
+    setTagValue(null);
+  }
+
+  return (
+    <Popover
+      open={Boolean(anchorEl)}
+      anchorEl={anchorEl}
+      onClose={handleClose}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+      transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+    >
+      <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, width: 250 }}>
+        <Typography>Tag this box</Typography>
+        <Autocomplete
+          freeSolo
+          value={tagValue}
+          onChange={(_event, newValue) => setTagValue(newValue)}
+          onInputChange={(_event, newInputValue) => setTagValue(newInputValue)}
+          options={existingTags}
+          renderInput={(params) => <TextField {...params} label="Select or type a tag" autoFocus />}
+          size="small"
+        />
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+          <Button onClick={handleClose} size="small">Cancel</Button>
+          <Button onClick={handleSave} variant="contained" size="small" disabled={!tagValue}>Save</Button>
+        </Box>
+      </Box>
+    </Popover>
+  )
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Container, Typography, Box, CircularProgress, Alert, Button, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { getImages, deleteImage } from '../services/api';
 import ImageUpload from '../components/ImageUpload';
 import ImageGallery from '../components/ImageGallery';
@@ -11,11 +12,6 @@ interface Image {
   filepath: string;
   storage_url: string;
   uploaded_at: string;
-}
-
-interface PaginatedImageResponse {
-  images: Image[];
-  total: number;
 }
 
 const ImagesPage: React.FC = () => {
@@ -80,64 +76,76 @@ const ImagesPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ my: 4 }}>
-        <Typography variant="h4" gutterBottom>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate('/projects')}
+          sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
+        >
+          Back to Projects
+        </Button>
+      </Box>
+
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" component="h1" sx={{ fontWeight: 800, mb: 1 }}>
           Image Dashboard
         </Typography>
-
-        <Box sx={{ mb: 4 }}>
-          <ImageUpload onUploadSuccess={handleImageUploadSuccess} />
-        </Box>
-
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h5">Uploaded Images</Typography>
-
-          <FormControl size="small" sx={{minWidth: 120}}>
-            <InputLabel id="page-size-label">Images per page</InputLabel>
-            <Select
-              labelId="page-size-label"
-              value={String(pageSize)}
-              onChange={(e: SelectChangeEvent<string>) => {
-                setPageSize(Number(e.target.value));
-                setPage(1);
-              }}
-              label="Images per page"
-            >
-              <MenuItem value={10}>10</MenuItem>
-              <MenuItem value={20}>20</MenuItem>
-              <MenuItem value={50}>50</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
-
-        {loading && <Box sx={{ display: 'flex', justifyContent: 'center' }}><CircularProgress /></Box>}
-        {error && <Alert severity="error">{error}</Alert>}
-
-        {!loading && !error && images.length > 0 && (
-          <>
-            <ImageGallery
-              images={images}
-              onDeleteSuccess={handleImageDeleteSuccess}
-              selectedImages={selectedImages}
-              onSelectedImagesChange={setSelectedImages}
-              onDeleteSelected={handleDeleteSelected}
-              navigate={navigate}
-            />
-
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-              <Button disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button>
-              <Typography sx={{ mx: 2, my: 'auto' }}>
-                Page {page} of {Math.ceil(totalImages / pageSize)}
-              </Typography>
-              <Button disabled={page * pageSize >= totalImages} onClick={() => setPage(page + 1)}>Next</Button>
-            </Box>
-          </>
-        )}
+        <Typography variant="body1" color="text.secondary">
+          Upload and manage images for this project.
+        </Typography>
       </Box>
+
+      <Box sx={{ mb: 4 }}>
+        <ImageUpload onUploadSuccess={handleImageUploadSuccess} />
+      </Box>
+
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h5">Uploaded Images</Typography>
+
+        <FormControl size="small" sx={{ minWidth: 120 }}>
+          <InputLabel id="page-size-label">Images per page</InputLabel>
+          <Select
+            labelId="page-size-label"
+            value={String(pageSize)}
+            onChange={(e: SelectChangeEvent<string>) => {
+              setPageSize(Number(e.target.value));
+              setPage(1);
+            }}
+            label="Images per page"
+          >
+            <MenuItem value={10}>10</MenuItem>
+            <MenuItem value={20}>20</MenuItem>
+            <MenuItem value={50}>50</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
+
+      {loading && <Box sx={{ display: 'flex', justifyContent: 'center' }}><CircularProgress /></Box>}
+      {error && <Alert severity="error">{error}</Alert>}
+
+      {!loading && !error && images.length > 0 && (
+        <>
+          <ImageGallery
+            images={images}
+            onDeleteSuccess={handleImageDeleteSuccess}
+            selectedImages={selectedImages}
+            onSelectedImagesChange={setSelectedImages}
+            onDeleteSelected={handleDeleteSelected}
+            navigate={navigate}
+          />
+
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+            <Button disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button>
+            <Typography sx={{ mx: 2, my: 'auto' }}>
+              Page {page} of {Math.ceil(totalImages / pageSize)}
+            </Typography>
+            <Button disabled={page * pageSize >= totalImages} onClick={() => setPage(page + 1)}>Next</Button>
+          </Box>
+        </>
+      )}
     </Container>
   );
 };
 
 export default ImagesPage;
-
