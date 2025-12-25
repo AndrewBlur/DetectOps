@@ -3,7 +3,7 @@ import json
 from fastapi import APIRouter
 from celery.result import AsyncResult
 from sse_starlette.sse import EventSourceResponse
-from app.celery_app import celery_app
+from app.core.celery_app import celery_app
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 

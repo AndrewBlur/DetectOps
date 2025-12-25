@@ -1,4 +1,4 @@
-from app.celery_app import celery_app
+from app.core.celery_app import celery_app
 from app.utils.blob_service import delete_blob
 
 

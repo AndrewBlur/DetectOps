@@ -5,10 +5,10 @@ import uuid
 from typing import List
 
 from celery.result import AsyncResult
-from app.celery_app import celery_app
+from app.core.celery_app import celery_app
 from app.tasks.image_tasks import process_batch_upload
 
-from app.database import get_db
+from app.core.database import get_db
 from app.projects.models import Project
 from app.images.models import Image
 from app.images.cache import get_signed_url_cached

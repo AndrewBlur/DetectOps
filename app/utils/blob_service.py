@@ -1,7 +1,7 @@
 from azure.storage.blob import BlobServiceClient, BlobSasPermissions, generate_blob_sas
 from datetime import datetime, timedelta
 
-from app.config import AzureStorageSettings
+from app.core.config import AzureStorageSettings
 
 from dotenv import load_dotenv
 load_dotenv()

@@ -9,7 +9,7 @@ from app.images.models import Image
 
 @pytest.fixture(autouse=True)
 def override_user(test_user: User, client: TestClient):
-    from app.main import app
+    from app.core.main import app
     app.dependency_overrides[get_current_user] = lambda: test_user
     yield
     app.dependency_overrides.pop(get_current_user, None)

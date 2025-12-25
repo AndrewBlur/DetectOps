@@ -3,10 +3,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
-from app.database import Base, get_db
-from app.main import app
+from app.core.database import Base, get_db
+from app.core.main import app
 from app.auth.models import User
-from app.config import DBSettings
+from app.core.config import DBSettings
 from app.auth.security import hash_password
 
 from dotenv import load_dotenv

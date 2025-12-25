@@ -2,11 +2,12 @@ from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-from app.database import Base
+from app.core.database import Base
 from app.auth.models import *
 from app.images.models import *
 from app.annotations.models import *
 from app.projects.models import *
+from app.datasets.models import *
 
 from alembic import context
 

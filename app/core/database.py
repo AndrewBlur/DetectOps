@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-from app.config import DBSettings
+from app.core.config import DBSettings
 
 from dotenv import load_dotenv
 load_dotenv()

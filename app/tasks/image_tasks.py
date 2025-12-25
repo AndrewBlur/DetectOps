@@ -3,8 +3,8 @@ from datetime import datetime
 
 import app.models
 
-from app.celery_app import celery_app
-from app.database import SessionLocal
+from app.core.celery_app import celery_app
+from app.core.database import SessionLocal
 from app.images.models import Image
 from app.utils.blob_service import upload_to_blob, generate_signed_url,delete_blob
 

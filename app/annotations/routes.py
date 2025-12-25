@@ -4,7 +4,7 @@ from sqlalchemy import distinct, and_
 from datetime import datetime
 from typing import List
 
-from app.database import get_db
+from app.core.database import get_db
 from app.projects.models import Project
 from app.annotations.models import Annotation
 from app.annotations.schemas import AnnotationRequest, AnnotationResponse

@@ -6,8 +6,8 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from jose.exceptions import ExpiredSignatureError, JWTError
 
-from app.config import JWTSettings
-from app.database import get_db
+from app.core.config import JWTSettings
+from app.core.database import get_db
 from app.auth.models import User
 
 from dotenv import load_dotenv

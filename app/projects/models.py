@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from app.database import Base
+from app.core.database import Base
 
 class Project(Base):
     __tablename__ = "projects"
@@ -14,3 +14,4 @@ class Project(Base):
 
     owner = relationship("User", back_populates="projects")
     images = relationship("Image", back_populates="project", cascade="all, delete-orphan")
+    datasets = relationship("Dataset", back_populates="project", cascade="all, delete-orphan")
