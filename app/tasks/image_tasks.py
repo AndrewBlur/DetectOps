@@ -9,19 +9,30 @@ from app.images.models import Image
 from app.utils.blob_service import upload_to_blob, generate_signed_url,delete_blob
 
 
-@celery_app.task(name="process_batch_upload")
-def process_batch_upload(files: list, project_id: int):
+@celery_app.task(name="process_batch_upload", bind=True)
+def process_batch_upload(self, files: list, project_id: int):
     db = SessionLocal()
 
     results = []
     failures = []
+    total = len(files)
 
     try:
-        for file in files:
+        for index, file in enumerate(files):
             filename = file["filename"]
             contents = file["data"].encode("latin1")
 
             blob_name = f"{project_id}/{uuid.uuid4()}_{filename}"
+
+            # Send progress update
+            self.update_state(
+                state="PROGRESS",
+                meta={
+                    "current": index + 1,
+                    "total": total,
+                    "message": f"Uploading {filename}..."
+                }
+            )
 
             try:
                 upload_to_blob(blob_name, contents)
@@ -56,7 +67,7 @@ def process_batch_upload(files: list, project_id: int):
             "processed": len(results),
             "failed": failures,
             "success_items": results,
-            "total": len(files)
+            "total": total
         }
 
     finally:

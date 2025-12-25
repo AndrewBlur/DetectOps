@@ -54,6 +54,10 @@ export const uploadBatchImages = (projectId: number, files: FileList) => {
   });
 }
 export const deleteImage = (projectId: number, imageId: number) => api.delete(`/projects/${projectId}/images/${imageId}`);
+
+// Task Status APIs
+export const getTaskStatusStreamUrl = (taskId: string) => `/tasks/upload/batch/stream/${taskId}`;
+export const getTaskStatus = (taskId: string) => api.get(`/tasks/upload/batch/status/${taskId}`);
 export const getImage = (projectId: number, imageId: number) => api.get(`/projects/${projectId}/images/${imageId}`);
 
 // Annotation APIs

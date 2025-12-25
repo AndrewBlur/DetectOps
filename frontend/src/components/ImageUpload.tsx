@@ -1,11 +1,17 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { Button, Box, Typography, Alert, CircularProgress } from '@mui/material';
+import { Button, Box, Typography, Alert, CircularProgress, LinearProgress } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import { uploadBatchImages } from '../services/api';
+import { uploadBatchImages, getTaskStatusStreamUrl } from '../services/api';
 import { useParams } from 'react-router-dom';
 
 interface ImageUploadProps {
   onUploadSuccess: () => void;
+}
+
+interface UploadProgress {
+  current: number;
+  total: number;
+  message: string;
 }
 
 const ImageUpload: React.FC<ImageUploadProps> = ({ onUploadSuccess }) => {
@@ -15,7 +21,9 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onUploadSuccess }) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -52,30 +60,75 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onUploadSuccess }) => {
       return;
     }
     if (!projectId) {
-        setError('Project ID is missing.');
-        return;
+      setError('Project ID is missing.');
+      return;
     }
 
     setLoading(true);
     setError(null);
     setSuccess(null);
+    setUploadProgress({ current: 0, total: selectedFiles.length, message: 'Starting upload...' });
 
     const fileList = new DataTransfer();
     selectedFiles.forEach(file => fileList.items.add(file));
 
-
     try {
-      await uploadBatchImages(Number(projectId), fileList.files);
-      setSuccess('Images uploaded successfully!');
-      setSelectedFiles([]); // Clear selected files
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''; // Reset file input
+      const response = await uploadBatchImages(Number(projectId), fileList.files);
+      const taskId = response.data.task_id;
+
+      if (taskId) {
+        // Connect to SSE stream for real-time updates
+        const streamUrl = getTaskStatusStreamUrl(taskId);
+        const eventSource = new EventSource(streamUrl);
+        eventSourceRef.current = eventSource;
+
+        eventSource.addEventListener('status', (event) => {
+          const data = JSON.parse(event.data);
+
+          if (data.state === 'PROGRESS' && data.result) {
+            setUploadProgress({
+              current: data.result.current || 0,
+              total: data.result.total || selectedFiles.length,
+              message: data.result.message || 'Uploading...'
+            });
+          } else if (data.state === 'SUCCESS') {
+            eventSource.close();
+            setLoading(false);
+            setSuccess('All images uploaded successfully!');
+            setUploadProgress(null);
+            setSelectedFiles([]);
+            if (fileInputRef.current) {
+              fileInputRef.current.value = '';
+            }
+            onUploadSuccess(); // Auto-refresh the image list!
+          } else if (data.state === 'FAILURE') {
+            eventSource.close();
+            setLoading(false);
+            setError(data.result?.message || 'Upload failed. Please try again.');
+            setUploadProgress(null);
+          }
+        });
+
+        eventSource.onerror = () => {
+          eventSource.close();
+          setLoading(false);
+          setError('Connection lost. Please refresh and try again.');
+          setUploadProgress(null);
+        };
+      } else {
+        // Fallback if no task_id (shouldn't happen)
+        setSuccess('Images uploaded successfully!');
+        setSelectedFiles([]);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        onUploadSuccess();
+        setLoading(false);
       }
-      onUploadSuccess(); // Notify parent component to refresh images
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to upload images.');
-    } finally {
       setLoading(false);
+      setUploadProgress(null);
     }
   };
 
@@ -133,6 +186,18 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onUploadSuccess }) => {
       >
         {loading ? <CircularProgress size={24} color="inherit" /> : 'Upload Selected'}
       </Button>
+      {uploadProgress && (
+        <Box sx={{ mt: 2, width: '100%' }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            {uploadProgress.message} ({uploadProgress.current}/{uploadProgress.total})
+          </Typography>
+          <LinearProgress
+            variant="determinate"
+            value={(uploadProgress.current / uploadProgress.total) * 100}
+            sx={{ height: 8, borderRadius: 4 }}
+          />
+        </Box>
+      )}
       {error && <Alert severity="error" sx={{ mt: 2, width: '100%' }}>{error}</Alert>}
       {success && <Alert severity="success" sx={{ mt: 2, width: '100%' }}>{success}</Alert>}
     </Box>
