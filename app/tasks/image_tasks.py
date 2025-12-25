@@ -10,7 +10,7 @@ from app.utils.blob_service import upload_to_blob, generate_signed_url,delete_bl
 
 
 @celery_app.task(name="process_batch_upload", bind=True)
-def process_batch_upload(self, files: list, project_id: int):
+def process_batch_upload(self, files: list, project_id: int, user_id: int):
     db = SessionLocal()
 
     results = []
@@ -22,7 +22,7 @@ def process_batch_upload(self, files: list, project_id: int):
             filename = file["filename"]
             contents = file["data"].encode("latin1")
 
-            blob_name = f"{project_id}/{uuid.uuid4()}_{filename}"
+            blob_name = f"images/{user_id}/{project_id}/{uuid.uuid4()}_{filename}"
 
             # Send progress update
             self.update_state(

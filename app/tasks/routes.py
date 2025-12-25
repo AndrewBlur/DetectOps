@@ -48,3 +48,38 @@ def get_batch_upload_status(task_id: str):
     }
 
 
+@router.get("/export/dataset/status/{task_id}")
+def get_dataset_export_status(task_id: str):
+    """Get the status of a dataset export task"""
+    task = AsyncResult(task_id, app=celery_app)
+    return {
+        "task_id": task_id,
+        "state": task.state,
+        "result": task.result if task.ready() else task.info
+    }
+
+
+@router.get("/export/dataset/stream/{task_id}")
+async def stream_dataset_export_status(task_id: str):
+    """SSE endpoint that streams dataset export progress in real-time"""
+    async def event_generator():
+        while True:
+            task = AsyncResult(task_id, app=celery_app)
+            
+            data = {
+                "task_id": task_id,
+                "state": task.state,
+                "result": task.result if task.ready() else task.info
+            }
+            
+            yield {
+                "event": "status",
+                "data": json.dumps(data)
+            }
+            
+            if task.ready():
+                break
+            
+            await asyncio.sleep(1)
+    
+    return EventSourceResponse(event_generator())

@@ -29,6 +29,7 @@ import OnlinePredictionIcon from '@mui/icons-material/OnlinePrediction';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
+import FolderZipIcon from '@mui/icons-material/FolderZip';
 
 // App-specific context hook
 import { useAuth } from '../contexts/AuthContext';
@@ -116,6 +117,7 @@ export default function AppLayout() {
     { text: 'Your Images', icon: <PhotoLibraryIcon />, path: `/projects/${projectId}/images` },
     { text: 'Annotated', icon: <PlaylistAddCheckIcon />, path: `/projects/${projectId}/annotated` },
     { text: 'Predictions', icon: <OnlinePredictionIcon />, path: `/projects/${projectId}/predictions` },
+    { text: 'Datasets', icon: <FolderZipIcon />, path: `/projects/${projectId}/datasets` },
   ], [projectId]);
 
   const handleDrawerOpen = () => {

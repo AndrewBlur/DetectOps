@@ -35,6 +35,9 @@ def delete_project(project_id: int, db: Session = Depends(get_db), current_user:
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
-    # The cascade delete in the model should handle deleting associated images.
+    # Explicitly load children to trigger SQLAlchemy after_delete events on cascade
+    _ = project.images
+    _ = project.datasets
+    
     db.delete(project)
     db.commit()

@@ -41,7 +41,7 @@ def test_upload_single_image_success(client: TestClient, test_project):
         assert data["storage_url"] == "https://signed.url/test.jpg"
         assert "id" in data
 
-def test_upload_batch_images_success(client: TestClient, test_project):
+def test_upload_batch_images_success(client: TestClient, test_project, test_user):
     project_id = test_project["id"]
     files = [
         ("files", ("img1.jpg", io.BytesIO(b"123"), "image/jpeg")),
@@ -57,6 +57,11 @@ def test_upload_batch_images_success(client: TestClient, test_project):
         data = response.json()
 
         mock_task.assert_called_once()
+        # Verify task was called with payload, project_id, and user_id
+        call_args = mock_task.call_args[0]
+        assert len(call_args) == 3  # payload, project_id, user_id
+        assert call_args[1] == project_id
+        assert call_args[2] == test_user.id
         assert data["task_id"] == "task123"
         assert data["total_files"] == 2
         assert data["message"] == "Batch upload is being processed"

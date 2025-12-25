@@ -13,5 +13,5 @@ class Project(Base):
     created_at = Column(DateTime, default=datetime.now)
 
     owner = relationship("User", back_populates="projects")
-    images = relationship("Image", back_populates="project", cascade="all, delete-orphan")
-    datasets = relationship("Dataset", back_populates="project", cascade="all, delete-orphan")
+    images = relationship("Image", back_populates="project", cascade="all, delete-orphan", passive_deletes=False)
+    datasets = relationship("Dataset", back_populates="project", cascade="all, delete-orphan", passive_deletes=False)

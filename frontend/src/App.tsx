@@ -19,6 +19,7 @@ import PredictionsPage from './pages/PredictionsPage';
 import SettingsPage from './pages/SettingsPage';
 import AnnotatedImagesPage from './pages/AnnotatedImagesPage';
 import AnnotationPage from './pages/AnnotationPage';
+import DatasetsPage from './pages/DatasetsPage';
 
 // A component to handle the root URL redirection
 const Root = () => {
@@ -47,12 +48,13 @@ function App() {
             <Route path="/projects" element={<ProtectedRoute />}>
               <Route index element={<ProjectDashboard />} />
               <Route path=":projectId" element={<AppLayout />}>
-                  <Route path="images" element={<ImagesPage />} />
-                  <Route path="images/:imageId/annotate" element={<AnnotationPage />} />
-                  <Route path="annotated" element={<AnnotatedImagesPage />} />
-                  <Route path="predictions" element={<PredictionsPage />} />
-                  <Route path="settings" element={<SettingsPage />} />
-                  <Route index element={<Navigate to="images" replace />} />
+                <Route path="images" element={<ImagesPage />} />
+                <Route path="images/:imageId/annotate" element={<AnnotationPage />} />
+                <Route path="annotated" element={<AnnotatedImagesPage />} />
+                <Route path="predictions" element={<PredictionsPage />} />
+                <Route path="datasets" element={<DatasetsPage />} />
+                <Route path="settings" element={<SettingsPage />} />
+                <Route index element={<Navigate to="images" replace />} />
               </Route>
             </Route>
           </Routes>

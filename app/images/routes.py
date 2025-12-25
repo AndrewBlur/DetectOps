@@ -42,7 +42,7 @@ async def enqueue_batch_upload(
             "data": content.decode("latin1")
         })
 
-    task = process_batch_upload.delay(payload, project.id)
+    task = process_batch_upload.delay(payload, project.id, project.user_id)
 
     return {
         "message": "Batch upload is being processed",
@@ -57,7 +57,7 @@ async def upload_image(
     project: Project = Depends(get_project_for_user)
 ):
     contents = await file.read()
-    blob_name = f"{project.id}/{uuid.uuid4()}_{file.filename}"
+    blob_name = f"images/{project.user_id}/{project.id}/{uuid.uuid4()}_{file.filename}"
 
     try:
         upload_to_blob(blob_name, contents)

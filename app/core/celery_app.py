@@ -8,7 +8,7 @@ celery_app = Celery(
     backend="redis://localhost:6379/1"
 )
 
-celery_app.autodiscover_tasks(['app'])
+celery_app.autodiscover_tasks(['app', 'app.tasks'])
 
 celery_app.conf.update(
     task_serializer='json',
@@ -18,3 +18,6 @@ celery_app.conf.update(
     enable_utc=True,
     )
 
+# Import tasks after celery_app is created to avoid circular imports
+import app.tasks.dataset_tasks  # noqa: F401
+import app.tasks.image_tasks    # noqa: F401

@@ -66,6 +66,15 @@ export const createAnnotation = (projectId: number, data: any) => api.post(`/pro
 export const deleteAnnotation = (projectId: number, annotationId: number, imageId: number) => api.delete(`/projects/${projectId}/annotations/delete/${annotationId}/${imageId}`);
 export const getTags = (projectId: number) => api.get(`/projects/${projectId}/annotations/tags`);
 
+// Dataset APIs
+export const getDatasets = (projectId: number) => api.get(`/projects/${projectId}/datasets`);
+export const createDataset = (projectId: number, trainSplit: number, valSplit: number, testSplit: number) =>
+  api.post(`/projects/${projectId}/datasets/export?train_split=${trainSplit}&val_split=${valSplit}&test_split=${testSplit}`);
+export const getDatasetExportStatus = (taskId: string) =>
+  api.get(`/tasks/export/dataset/status/${taskId}`);
+export const deleteDataset = (projectId: number, datasetId: number) =>
+  api.delete(`/projects/${projectId}/datasets/${datasetId}`);
+
 
 export default api;
 
